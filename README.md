@@ -37,17 +37,28 @@ verbosity        = 1
 ## 3. Create a token.
 To interact with an Operend server through the `opeRend` package, you'll need to create a token.
 
- 1. Navigate to the Operend server in your browser and click the **Log In With CILogon** button to log in:
+Navigate to the Operend server in your browser and click the **Log In With CILogon** button to log in:
+<br><br><img width="222" alt="operend01" src="https://github.com/agower/opeRend/assets/11539805/ffcf0a6f-8e79-4a7e-bd9f-cc7172edd0a6"><br>
 
- 2. Click **ACCESS TOKENS** and then **Add Token**:
+Click **ACCESS TOKENS**:
+<br><br><img width="153" alt="operend02" src="https://github.com/agower/opeRend/assets/11539805/02f1f525-dcfc-4712-ac3f-5668249f9384"><br>
 
- 3. Enter a token name and select the privileges to grant to the token:
+Then click **Add Token**:
+<br><br><img width="763" alt="operend03" src="https://github.com/agower/opeRend/assets/11539805/efb96af3-10cb-4794-b240-c8aac3704c3d"><br>
 
- 4. Retrieve the token by one of the following methods:
-    - Click **Download JSON** to save it to the local file
-    `token-name.json`
-    - Click **Copy to Clipboard** to save it to the clipboard.
- 5. Copy and paste the *entire* text from the JSON file or from the clipboard into the `token = ` field of the config file, so that it looks like:
+Enter a token name and select the privileges to grant to the token:
+<br><br><img width="590" alt="operend04" src="https://github.com/agower/opeRend/assets/11539805/b9a3c6c2-6564-4dc0-9912-260191bd450e"><br>
+
+A new window labeled **New Access Token Created** will appear:
+<br><br><img width="291" alt="operend05" src="https://github.com/agower/opeRend/assets/11539805/a4fd29c8-b698-4b23-b503-fbcc206442a1"><br>
+
+Retrieve the token by one of the following methods:
+ - Click **Download JSON** to save it to the local file
+   `token-name.json`
+ - Click **Copy to Clipboard** to save it to the clipboard; the text will change to **Copied.** when this happens:
+<br><br><img width="290" alt="operend06" src="https://github.com/agower/opeRend/assets/11539805/b694cf72-9c76-4b1f-825f-1a2972b2bf52"><br>
+
+Copy and paste the *entire* text from the JSON file or from the clipboard into the `token = ` field of the config file, so that it looks like:
 ```
 token = {"username":"myUsername","name":"my-readwrite-token","authorizations":["read","write"],"creationDate":"Mon Jan 01 00:00:00 UTC 1970","secret":"myUsername:my-readwrite-token:TBKwVAhgkKxraxF6btlIOxMHhoWdh0ETmphKmF7t"}
 ```
