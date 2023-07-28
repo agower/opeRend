@@ -1,0 +1,30 @@
+Package: opeRend
+Title: R interface to an Operend Core instance
+Version: 0.1-0
+Author: Adam Gower <agower@bu.edu>
+Maintainer: Adam Gower <agower@bu.edu>
+Authors@R: c(person("Adam", "Gower", email = "agower@bu.edu", role = c("aut", "cre")))
+Description: Provides R functions for accessing and manipulating data in an Operend Core instance.
+Depends: R (>= 3.3.0)
+Imports: configr, methods, RCurl, rjson, R.utils, tools, S4Vectors (>= 0.10.3), utils
+Collate:
+    classes.R
+    methods.R
+    operendApiUrl.R
+    operendApiCall.R
+    operendProcessing.R
+    JobRuns.R
+    WorkFiles.R
+    EntityClasses.R
+    Users.R
+    Groups.R
+    WorkFileProperties.R
+    Entities.R
+    operendConfig.R
+    hooks.R
+License: LGPL (>= 3) + file LICENSE
+Encoding: UTF-8
+RoxygenNote: 7.1.2
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
