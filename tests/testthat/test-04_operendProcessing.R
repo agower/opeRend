@@ -18,29 +18,34 @@ test_that(
 test_that(
   "operendPreprocess returns expected output",
   {
+    # If input is an empty list, an empty list should be returned
     testInput <- list()
     expectedOutput <- list()
     expect_identical(operendPreprocess(testInput), expectedOutput)
 
+    # operendDate and operendPermissions objects are coerced specially
     testInput <- list(
       date = operendDate(as.POSIXct(0, origin="1970-01-01")),
-      permissions = operendPermissions(testGroup=c("R","U"),`_other`=c("R"))
+      permissions = operendPermissions(testGroup=c("R","U"), `_other`="R")
     )
     expectedOutput <- list(
       date = "Thu Jan 01 00:00:00 UTC 1970",
-      permissions = list(testGroup = c("R","U"), `_other`="R")
+      permissions = list(testGroup = list("R","U"), `_other`=list("R"))
     )
     expect_identical(operendPreprocess(testInput), expectedOutput)
 
+    # Coercion should be applied recursively
     testInput <- list(
-      date = list(a=operendDate(as.POSIXct(0, origin="1970-01-01"))),
-      permissions = list(
-        a=list(b=operendPermissions(testGroup=c("R","U"),`_other`=c("R")))
+      dateList = list(x = operendDate(as.POSIXct(0, origin="1970-01-01"))),
+      permissionsList = list(
+        x = operendPermissions(testGroup=c("R","U"), `_other`="R")
       )
     )
     expectedOutput <- list(
-      date = list(a="Thu Jan 01 00:00:00 UTC 1970"),
-      permissions = list(a=list(b=list(testGroup = c("R","U"), `_other`="R")))
+      dateList = list(x="Thu Jan 01 00:00:00 UTC 1970"),
+      permissionsList = list(
+        x = list(testGroup = list("R","U"), `_other`=list("R"))
+      )
     )
     expect_identical(operendPreprocess(testInput), expectedOutput)
   }

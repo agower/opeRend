@@ -33,13 +33,15 @@ operendPreprocess <- function (x)
     if (!is.list(x)) stop("Argument 'x' must be a list")
   }
 
-  # Coerce any S4 objects to character vectors or lists as needed to enable
-  # conversion to JSON
+  # Coerce any operendDate objects to character vectors
+  # to enable conversion to JSON
   x <- rapply(
     x, f=as, Class="character", classes="operendDate", how="replace"
   )
+  # Coerce any operendPermissions objects to lists of lists
+  # to ensure that group-specific permissions are converted to JSON arrays
   x <- rapply(
-    x, f=as, Class="list", classes="operendPermissions", how="replace"
+    x, f=lapply, FUN=as.list, classes="operendPermissions", how="replace"
   )
 
   # Return the preprocessed list

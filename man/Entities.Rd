@@ -37,7 +37,9 @@ updateEntity(
 record to be added, deleted, retrieved, or updated}
 
 \item{variables}{Additional arguments specifying variables of the \code{Entity}
-record to be added or updated, or variables on which to limit a listing}
+record to be added or updated, or variables on which to limit a listing;
+in \code{updateEntity}, this argument is required if argument
+\code{permissions} is missing}
 
 \item{permissions}{An optional \code{\linkS4class{operendPermissions}} object
 specifying the permissions to be used when creating or updating the record}

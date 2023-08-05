@@ -446,8 +446,12 @@ test_that(
   "updateEntity returns an operendEntity object",
   {
     result <- updateEntity(
-      id=testEntity1a, variables=list(booleanScalar=FALSE),
-      permissions=operendPermissions(rootgroup=c("R","U","D"))
+      id=testEntity1a, variables=list(booleanScalar=FALSE)
+    )
+    expect_s4_class(result, class="operendEntity")
+    result <- updateEntity(
+      id=testEntity1a,
+      permissions=operendPermissions(rootgroup=c("R","U","D"), `_other`="R")
     )
     expect_s4_class(result, class="operendEntity")
   }

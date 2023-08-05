@@ -12,16 +12,18 @@
 #' record to be added, deleted, retrieved, or updated
 #' @param variables
 #' Additional arguments specifying variables of the \code{Entity}
-#' record to be added or updated, or variables on which to limit a listing
+#' record to be added or updated, or variables on which to limit a listing;
+#' in \code{updateEntity}, this argument is required if argument
+#' \code{permissions} is missing
+#' @param permissions
+#' An optional \code{\linkS4class{operendPermissions}} object
+#' specifying the permissions to be used when creating or updating the record
 #' @param verbosity
 #' A value coercible to a nonnegative integer, specifying the verbosity level.
 #' A value of FALSE, TRUE, 0 or 1 does not produce any messages.
 #' A value of 2 instructs the curl calls to produce verbose output.
 #' A value greater than 2 produces additional output.
 #' Defaults to \code{getOption("opeRend")$verbosity}.
-#' @param permissions
-#' An optional \code{\linkS4class{operendPermissions}} object
-#' specifying the permissions to be used when creating or updating the record
 #' @return
 #' \describe{
 #'   \item{\code{addEntity}, \code{getEntity}, \code{updateEntity}}{
@@ -285,7 +287,13 @@ updateEntity <- function (
     }
   }
 
-  if (missing(variables) || !(is.list(variables) && length(variables))) {
+  if (missing(variables)) {
+    if (missing(permissions)) {
+      stop(
+        "If argument 'permissions' is missing, argument 'variables' is required"
+      )
+    }
+  } else if (!(is.list(variables) && length(variables))) {
     stop("Argument 'variables' must be a list of nonzero length")
   } else if (
     any(names(variables) %in% c("", NA_character_)) ||
@@ -309,40 +317,43 @@ updateEntity <- function (
     )
   }
 
-  # Retrieve Entity
-  object <- getEntity(id, verbosity=verbosity)
-  class <- slot(object, "_class")
-  # If the current Entity class definition is not the cache,
-  # retrieve it from the Operend Core server and place it in the cache
-  if (exists(class, operendEntityClassCache)) {
-    entityClassDef <- get(class, operendEntityClassCache)
-  } else {
-    entityClassDef <- getEntityClass(class)
-    assign(x = class, value = entityClassDef, envir = operendEntityClassCache)
-  }
+  if (!missing(variables)) {
+    # Retrieve Entity
+    object <- getEntity(id, verbosity=verbosity)
+    class <- slot(object, "_class")
+    # If the current Entity class definition is not the cache,
+    # retrieve it from the Operend Core server and place it in the cache
+    if (exists(class, operendEntityClassCache)) {
+      entityClassDef <- get(class, operendEntityClassCache)
+    } else {
+      entityClassDef <- getEntityClass(class)
+      assign(x = class, value = entityClassDef, envir = operendEntityClassCache)
+    }
 
-  i <- which(!is.element(names(variables), names(entityClassDef@variables)))
-  if (length(i)) {
-    warning(
-      "Removing following elements from argument 'variables': ",
-      paste(sQuote(names(variables)[i]), collapse=", ")
+    i <- which(!is.element(names(variables), names(entityClassDef@variables)))
+    if (length(i)) {
+      warning(
+        "Removing following elements from argument 'variables': ",
+        paste(sQuote(names(variables)[i]), collapse=", ")
+      )
+      variables <- variables[-i]
+    }
+
+    # Ensure that Entity array variables of length 1 are converted to JSON
+    # arrays by coercing to a list first
+    arrayVariableIds <- names(
+      which(sapply(entityClassDef@variables, slot, "is_array"))
     )
-    variables <- variables[-i]
-  }
-
-  # Ensure that Entity array variables of length 1 are converted to JSON
-  # arrays by coercing to a list first
-  arrayVariableIds <- names(
-    which(sapply(entityClassDef@variables, slot, "is_array"))
-  )
-  for (variableId in arrayVariableIds) {
-    if (length(variables[[variableId]]) == 1) {
-      variables[[variableId]] <- list(unname(variables[[variableId]]))
+    for (variableId in arrayVariableIds) {
+      if (length(variables[[variableId]]) == 1) {
+        variables[[variableId]] <- list(unname(variables[[variableId]]))
+      }
     }
   }
 
-  # Create list of fields including any parameters intrinsic to Entities
-  fields <- c("_entity_id"=id, variables)
+  # Create list of fields from variables and/or permissions
+  fields <- list("_entity_id" = id)
+  if (!missing(variables)) fields <- c(fields, variables)
   if (!missing(permissions)) fields[["_permissions"]] <- permissions
 
   # Submit a PUT request and stop if an error is returned
@@ -355,7 +366,7 @@ updateEntity <- function (
   )
 
   if (verbosity > 0) {
-    cat(class, "record", sQuote(id), "was successfully updated.\n")
+    cat(result@`_class`, "record", sQuote(id), "was successfully updated.\n")
   }
   result
 }
