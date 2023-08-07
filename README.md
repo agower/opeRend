@@ -4,19 +4,36 @@
 To interact with an Operend server through the `opeRend` package, you'll need to create a token.
 
 Navigate to the Operend server in your browser and click the **Log In With CILogon** button to log in:
-<br><br><img width="222" alt="operend01" src="https://github.com/agower/opeRend/assets/11539805/ffcf0a6f-8e79-4a7e-bd9f-cc7172edd0a6"><br>
+<br><br><img width="25%" src="https://github.com/agower/opeRend/assets/11539805/ffcf0a6f-8e79-4a7e-bd9f-cc7172edd0a6"><br>
+
+*For the first-time login only:*
+- At the dropdown menu, select the CILogon identity provider through which you will authenticate (e.g., your institution, ORCID, etc).
+  Click the **Remember this selection** checkbox, and then click the **Log On** button:
+<br><br><img width="100%" src="https://github.com/agower/opeRend/assets/11539805/5debd99c-5553-477f-9423-646f3bc3dd3a"><br>
+
+- You will be redirected to the appropriate authentication page, where you can log in with the appropriate credentials:
+<br><br><img width="33%" src="https://github.com/agower/opeRend/assets/11539805/a5636ef7-c7ac-4924-a2dd-743542e6591f"><br>
+
+- The Operend server will then send an email to the address associated with the account:
+<br><br><img width="25%" src="https://github.com/agower/opeRend/assets/11539805/536db316-2e44-451d-87e1-045f9b5023ea"><br>
+
+- Click on the link in the email from Operend Security and a confirmation message should open in your browser; click **Login to Operend** to proceed:
+<br><br><img width="33%" src="https://github.com/agower/opeRend/assets/11539805/098f778d-db1a-43dc-acc6-3a4fe5eab397"><br>
+  
+Log in with the appropriate credentials at the authentication page:
+<br><br><img width="33%" src="https://github.com/agower/opeRend/assets/11539805/a5636ef7-c7ac-4924-a2dd-743542e6591f"><br>
 
 Click **ACCESS TOKENS**:
-<br><br><img width="153" alt="operend02" src="https://github.com/agower/opeRend/assets/11539805/02f1f525-dcfc-4712-ac3f-5668249f9384"><br>
+<br><br><img width="20%" src="https://github.com/agower/opeRend/assets/11539805/02f1f525-dcfc-4712-ac3f-5668249f9384"><br>
 
 Then click **Add Token**:
-<br><br><img width="763" alt="operend03" src="https://github.com/agower/opeRend/assets/11539805/efb96af3-10cb-4794-b240-c8aac3704c3d"><br>
+<br><br><img width="100%" src="https://github.com/agower/opeRend/assets/11539805/efb96af3-10cb-4794-b240-c8aac3704c3d"><br>
 
 Enter a token name and select the privileges to grant to the token:
-<br><br><img width="590" alt="operend04" src="https://github.com/agower/opeRend/assets/11539805/b9a3c6c2-6564-4dc0-9912-260191bd450e"><br>
+<br><br><img width="50%" src="https://github.com/agower/opeRend/assets/11539805/b9a3c6c2-6564-4dc0-9912-260191bd450e"><br>
 
 A new window labeled **New Access Token Created** will appear:
-<br><br><img width="291" alt="operend05" src="https://github.com/agower/opeRend/assets/11539805/a4fd29c8-b698-4b23-b503-fbcc206442a1"><br>
+<br><br><img width="25%" src="https://github.com/agower/opeRend/assets/11539805/a4fd29c8-b698-4b23-b503-fbcc206442a1"><br>
 
 Retrieve the token by one of the following methods:
  - Click **Download JSON** to save it to the local file
