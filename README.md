@@ -1,6 +1,12 @@
 # Getting started with opeRend
 
-## 1. Create a token.
+## 1. Install the opeRend package.
+The opeRend package may be installed directly from GitHub with the command:
+```
+devtools::install_github("agower/opeRend")
+```
+
+## 2. Create a token.
 To interact with an Operend server through the `opeRend` package, you'll need to create a token.
 
 Navigate to the Operend server in your browser and click the **Log In With CILogon** button to log in:
@@ -38,12 +44,12 @@ A new window labeled **New Access Token Created** will appear:
 Retrieve the token by one of the following methods:
  - Click **Download JSON** to save it to the local file
    `token-name.json`
- - Click **Copy to Clipboard** to save it to the clipboard to paste it into a configuration file in step 2.
+ - Click **Copy to Clipboard** to save it to the clipboard to paste it into a configuration file in step 3.
 
    The text will change to **Copied.** when this happens:
 <br><br><img width="290" alt="operend06" src="https://github.com/agower/opeRend/assets/11539805/b694cf72-9c76-4b1f-825f-1a2972b2bf52"><br>
 
-## 2. Create a configuration file.
+## 3. Create a configuration file.
 The opeRend package uses an [INI-formatted](https://en.wikipedia.org/wiki/INI_file) configuration file, divided into sections (one for each configuration), each of which contains the following parameters:
 
 - `api_base_url`
@@ -53,7 +59,7 @@ The storage location used for creating new WorkFiles
 - `timezone`
 The timezone to be used when interpreting dates in Operend records
 - `token`
-A JSON record containing a token for authenticating API calls (as obtained from the server in step 1).
+A JSON record containing a token for authenticating API calls (as obtained from the server in step 2).
 - `verbosity`
 A nonnegative integer specifying how many messages to write to the terminal (aside from errors and warnings, which are always written):
    - 0: suppresses all messages
@@ -76,7 +82,7 @@ Copy and paste the *entire* text from the JSON file or from the clipboard in ste
 token = {"username":"myUsername","name":"my-readwrite-token","authorizations":["read","write"],"creationDate":"Mon Jan 01 00:00:00 UTC 1970","secret":"myUsername:my-readwrite-token:TBKwVAhgkKxraxF6btlIOxMHhoWdh0ETmphKmF7t"}
 ```
 
-## 3. Set environment variables.
+## 4. Set environment variables.
 Before the opeRend R package can be used, the following environment variables must be set:
 - **`OPEREND_CONFIG_FILENAME`**
 The full path to the configuration file.
@@ -92,12 +98,6 @@ export OPEREND_CONFIG_FILENAME="~/.config/operend.conf"
 export OPEREND_CONFIG="default"
 ```
 In a Windows environment, these may be set through the Environment Variables system dialog (accessible by searching the Control Panel or Start menu).
-
-## 4. Install the opeRend package.
-The opeRend package may be installed directly from GitHub with the command:
-```
-devtools::install_github("agower/opeRend")
-```
 
 ## 5. Test the credentials.
 The simplest way to test whether a connection can be made to an Operend server is to issue the `listUsers()` command to list all visible users.  As this will always include at least the user performing the query, it should always return a result, and is therefore a useful quick check for connectivity.

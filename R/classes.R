@@ -154,7 +154,7 @@ operendToken <- setClass(
     if (length(object@authorizations) == 0) {
       errors <- c(errors, "Slot 'authorizations' must be of nonzero length")
     }
-    if (!isTRUE(grepl("^[^:]+:[^:]+:[0-9A-Za-z]{40}$", object@secret))) {
+    if (!isTRUE(grepl("^[^:]+:[^:]+:.{40}$", object@secret))) {
       errors <- c(errors, "Token secret is incorrectly formatted")
     }
     if (length(errors)) errors else TRUE

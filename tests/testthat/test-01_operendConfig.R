@@ -63,20 +63,25 @@ test_that(
     expect_error(getOperendConfig(config=0L))
     expect_error(getOperendConfig(config=character()))
     expect_error(getOperendConfig(config=letters))
-    # The filename in argument 'configFile' must exist
-    expect_error(getOperendConfig(configFile=""))
+    # If argument 'config' is specified when argument 'configFile' is empty,
+    # a warning is thrown
+    expect_warning(getOperendConfig(configFile="", config="testConfig"))
+    # The file specified in argument 'config' must exist
+    missingConfigFile <- tempfile()
+    unlink(missingConfigFile)
+    expect_error(getOperendConfig(configFile=missingConfigFile))
     # The file in argument 'configFile' must be INI-formatted
     write("this is not a valid INI file", testConfigFile)
     expect_error(getOperendConfig(configFile=testConfigFile))
     # The section specified by argument 'config' must be present in the file
     configr::write.config(configDat, testConfigFile, write.type="ini")
-    expect_error(getOperendConfig(testConfigFile, "missingConfig"))
+    expect_error(getOperendConfig(testConfigFile, config="missingConfig"))
     # The config file must contain a token
-    expect_error(getOperendConfig(testConfigFile, "testConfig"))
+    expect_error(getOperendConfig(testConfigFile, config="testConfig"))
     # The config file must contain a valid token
     configDat$testConfig$token <- "invalidToken"
     configr::write.config(configDat, testConfigFile, write.type="ini")
-    expect_error(getOperendConfig(testConfigFile, "testConfig"))
+    expect_error(getOperendConfig(testConfigFile, config="testConfig"))
     configDat$testConfig$token <- list(
       username       = "testUser",
       name           = "testToken",
@@ -88,19 +93,19 @@ test_that(
     # If a base API URL is provided, it must be valid
     configDat$testConfig$api_base_url <- "invalidUrl"
     configr::write.config(configDat, testConfigFile, write.type="ini")
-    expect_error(getOperendConfig(testConfigFile, "testConfig"))
+    expect_error(getOperendConfig(testConfigFile, config="testConfig"))
     configDat$testConfig$api_base_url <- NULL
     # If a time zone is provided, it must be valid
     configDat$testConfig$timezone <- "invalidTimezone"
     configr::write.config(configDat, testConfigFile, write.type="ini")
-    expect_error(getOperendConfig(testConfigFile, "testConfig"))
+    expect_error(getOperendConfig(testConfigFile, config="testConfig"))
     configDat$testConfig$timezone <- NULL
     # If a verbosity value is provided,
     # it must be coercible to a single nonnegative integer
     for (verbosity in list(-1, 0:1, NA_integer_, "non-integer")) {
       configDat$testConfig$verbosity <- verbosity
       configr::write.config(configDat, testConfigFile, write.type="ini")
-      expect_error(getOperendConfig(testConfigFile, "testConfig"))
+      expect_error(getOperendConfig(testConfigFile, config="testConfig"))
     }
   }
 )
@@ -131,7 +136,7 @@ test_that(
     )
     configDat$testConfig$token <- rjson::toJSON(configDat$testConfig$token)
     configr::write.config(configDat, testConfigFile, write.type="ini")
-    result <- getOperendConfig(testConfigFile, "testConfig")
+    result <- getOperendConfig(testConfigFile, config="testConfig")
     expect_identical(result, expectedOutput)
   }
 )

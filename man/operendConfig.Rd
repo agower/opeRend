@@ -10,13 +10,13 @@ getOperendConfig(
 )
 }
 \arguments{
-\item{configFile}{A character string specifying the full path to an INI-formatted config file;
-defaults to the contents of the environment variable
-\code{OPEREND_CONFIG_FILE}}
+\item{configFile}{A character string specifying the full path to an INI-formatted config file.
+Defaults to the contents of the environment variable
+\code{OPEREND_CONFIG_FILE}; if that is not set, default parameters are used.}
 
-\item{config}{A character string specifying the section of the config file to be used;
-defaults to the contents of the environment variable
-\code{OPEREND_CONFIG}, and if that is not set, \code{"default"}}
+\item{config}{A character string specifying the section of the config file to be used.
+Defaults to the contents of the environment variable
+\code{OPEREND_CONFIG}; if that is not set, \code{"default"}}
 }
 \value{
 A list of configuration parameters, invisibly.
