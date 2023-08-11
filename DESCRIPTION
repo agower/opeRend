@@ -1,6 +1,6 @@
 Package: opeRend
 Title: R interface to an Operend Core instance
-Version: 0.1-2
+Version: 0.1-3
 Author: Adam Gower <agower@bu.edu>
 Maintainer: Adam Gower <agower@bu.edu>
 Authors@R: c(person("Adam", "Gower", email = "agower@bu.edu", role = c("aut", "cre")))

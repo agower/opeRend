@@ -84,7 +84,7 @@ token = {"username":"myUsername","name":"my-readwrite-token","authorizations":["
 
 ## 4. Set environment variables.
 Before the opeRend R package can be used, the following environment variables must be set:
-- **`OPEREND_CONFIG_FILENAME`**
+- **`OPEREND_CONFIG_FILE`**
 The full path to the configuration file.
 - **`OPEREND_CONFIG`**
 The name of the configuration (section of the configuration file) to use. If not specified, `"default"` will be used.
@@ -94,7 +94,7 @@ In a Unix-like system (including Macs), these may be set with the `export` comma
 For example, the following lines might be added to a `~/.bashrc` file:
 ```
 # opeRend environment variables
-export OPEREND_CONFIG_FILENAME="~/.config/operend.conf"
+export OPEREND_CONFIG_FILE="~/.config/operend.conf"
 export OPEREND_CONFIG="default"
 ```
 In a Windows environment, these may be set through the Environment Variables system dialog (accessible by searching the Control Panel or Start menu).

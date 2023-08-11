@@ -50,10 +50,19 @@ getOperendConfig <- function (
     # If config section was not provided, use "default"
     if (config == "") config <- "default"
 
+    # Use normalizePath() to expand path to config file,
+    # converting any warning to an error
+    configFile <- tryCatch(
+      normalizePath(configFile, mustWork=NA),
+      warning = function (condition) {
+        stop(
+          "Invalid config filename ", sQuote(configFile), ":\n",
+          condition$message,
+          call. = FALSE
+        )
+      }
+    )
     # Extract parameters from config file, throwing errors if needed
-    if (!file.exists(configFile)) {
-      stop("Config file ", sQuote(configFile), " does not exist")
-    }
     if (!configr::is.ini.file(configFile)) {
       stop("Config file ", sQuote(configFile), " is not a valid INI file")
     }
