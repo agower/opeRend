@@ -129,7 +129,7 @@ testEntity2 <- paste("testEntity", sample(1E6, size=1)-1, sep="_")
 
 emptyJSON <- "{}"
 invalidJSON <- "invalid JSON"
-entityClassJSON <- rjson::toJSON(testEntityClass1Def)
+testEntityClass1JSON <- rjson::toJSON(testEntityClass1Def)
 
 # Create a random raw vector
 n <- 2^20
@@ -154,21 +154,28 @@ test_that(
     expect_error(addEntityClass(file=0L))
     expect_error(addEntityClass(file=character()))
     expect_error(addEntityClass(file=letters))
+    # Argument 'permissions' must be an operendPermissions object
+    expect_error(
+      addEntityClass(
+        file=textConnection(testEntityClass1JSON),
+        permissions=list("_other"=character())
+      )
+    )
     # Argument 'verbosity' must be coercible to a single nonnegative integer
     expect_error(
-      addEntityClass(file=textConnection(entityClassJSON), verbosity=-1)
+      addEntityClass(file=textConnection(testEntityClass1JSON), verbosity=-1)
     )
     expect_error(
-      addEntityClass(file=textConnection(entityClassJSON), verbosity=0:1)
+      addEntityClass(file=textConnection(testEntityClass1JSON), verbosity=0:1)
     )
     expect_error(
       addEntityClass(
-        file=textConnection(entityClassJSON), verbosity=NA_integer_
+        file=textConnection(testEntityClass1JSON), verbosity=NA_integer_
       )
     )
     expect_error(
       addEntityClass(
-        file=textConnection(entityClassJSON), verbosity="non-integer"
+        file=textConnection(testEntityClass1JSON), verbosity="non-integer"
       )
     )
     # Input from 'file' must contain valid JSON
@@ -180,12 +187,15 @@ test_that(
 test_that(
   "addEntityClass returns an operendEntityClass object",
   {
+    # Call without permissions
     result <- addEntityClass(
       file=textConnection(rjson::toJSON(testEntityClass1Def))
     )
     expect_s4_class(result, class="operendEntityClass")
+    # Call with permissions
     result <- addEntityClass(
-      file=textConnection(rjson::toJSON(testEntityClass2Def))
+      file=textConnection(rjson::toJSON(testEntityClass2Def)),
+      permissions=operendPermissions(`_other`="R")
     )
     expect_s4_class(result, class="operendEntityClass")
   }
@@ -230,27 +240,45 @@ test_that(
 test_that(
   "updateEntityClass correctly handles arguments",
   {
-    # Argument 'file' must be present
-    expect_error(updateEntityClass())
+    # Argument 'name' must be a character string
+    expect_error(getEntityClass(name=0L))
+    expect_error(getEntityClass(name=character()))
+    expect_error(getEntityClass(name=letters))
     # Argument 'file' must be a character string or a connection
     expect_error(updateEntityClass(file=0L))
     expect_error(updateEntityClass(file=character()))
     expect_error(updateEntityClass(file=letters))
+    # Argument 'permissions' must be an operendPermissions object
+    expect_error(
+      addEntityClass(
+        file=textConnection(testEntityClass1JSON),
+        permissions=list("_other"=character())
+      )
+    )
+    # If the argument 'file' is missing,
+    # both of the arguments 'name' and 'permissions' must be present
+    expect_error(updateEntityClass())
+    expect_error(updateEntityClass(name=testEntityClass1))
+    expect_error(
+      updateEntityClass(permissions=operendPermissions(`_other`="R"))
+    )
     # Argument 'verbosity' must be coercible to a single nonnegative integer
     expect_error(
-      updateEntityClass(file=textConnection(entityClassJSON), verbosity=-1)
-    )
-    expect_error(
-      updateEntityClass(file=textConnection(entityClassJSON), verbosity=0:1)
+      updateEntityClass(file=textConnection(testEntityClass1JSON), verbosity=-1)
     )
     expect_error(
       updateEntityClass(
-        file=textConnection(entityClassJSON), verbosity=NA_integer_
+        file=textConnection(testEntityClass1JSON), verbosity=0:1
       )
     )
     expect_error(
       updateEntityClass(
-        file=textConnection(entityClassJSON), verbosity="non-integer"
+        file=textConnection(testEntityClass1JSON), verbosity=NA_integer_
+      )
+    )
+    expect_error(
+      updateEntityClass(
+        file=textConnection(testEntityClass1JSON), verbosity="non-integer"
       )
     )
     # Input from 'file' must contain valid JSON
@@ -262,6 +290,7 @@ test_that(
 test_that(
   "updateEntityClass returns an operendEntityClass object",
   {
+    # Update variables only
     testEntityClass1Def$variables <- c(
       testEntityClass1Def$variables,
       list(
@@ -274,6 +303,12 @@ test_that(
     )
     result <- updateEntityClass(
       file=textConnection(rjson::toJSON(testEntityClass1Def))
+    )
+    expect_s4_class(result, class="operendEntityClass")
+    # Update permissions only
+    result <- updateEntityClass(
+      name=testEntityClass1,
+      permissions=operendPermissions(`_other`="R")
     )
     expect_s4_class(result, class="operendEntityClass")
   }

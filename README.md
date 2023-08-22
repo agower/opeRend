@@ -97,6 +97,8 @@ For example, the following lines might be added to a `~/.bashrc` file:
 export OPEREND_CONFIG_FILE="~/.config/operend.conf"
 export OPEREND_CONFIG="default"
 ```
+More information about `.bashrc` and other Bash config files is available at: [The Linux Documentation Project 3.1: Shell initialization files](https://tldp.org/LDP/Bash-Beginners-Guide/html/sect_03_01.html)
+
 In a Windows environment, these may be set through the Environment Variables system dialog (accessible by searching the Control Panel or Start menu).
 
 ## 5. Test the credentials.

@@ -12,9 +12,7 @@
 #' record to be added, deleted, retrieved, or updated
 #' @param variables
 #' Additional arguments specifying variables of the \code{Entity}
-#' record to be added or updated, or variables on which to limit a listing;
-#' in \code{updateEntity}, this argument is required if argument
-#' \code{permissions} is missing
+#' record to be added or updated, or variables on which to limit a listing
 #' @param permissions
 #' An optional \code{\linkS4class{operendPermissions}} object
 #' specifying the permissions to be used when creating or updating the record
@@ -24,6 +22,9 @@
 #' A value of 2 instructs the curl calls to produce verbose output.
 #' A value greater than 2 produces additional output.
 #' Defaults to \code{getOption("opeRend")$verbosity}.
+#' @details
+#' If \code{updateEntity} is called without argument \code{variables},
+#' the argument \code{permissions} \emph{must} be provided.
 #' @return
 #' \describe{
 #'   \item{\code{addEntity}, \code{getEntity}, \code{updateEntity}}{
@@ -287,27 +288,29 @@ updateEntity <- function (
     }
   }
 
-  if (missing(variables)) {
-    if (missing(permissions)) {
+  if (!missing(variables)) {
+    if (!(is.list(variables) && length(variables))) {
+      stop("Argument 'variables' must be a list of nonzero length")
+    } else if (
+      any(names(variables) %in% c("", NA_character_)) ||
+      any(duplicated(names(variables)))
+    ) {
       stop(
-        "If argument 'permissions' is missing, argument 'variables' is required"
+        "All elements of argument 'variables' must have valid and unique names"
       )
     }
-  } else if (!(is.list(variables) && length(variables))) {
-    stop("Argument 'variables' must be a list of nonzero length")
-  } else if (
-    any(names(variables) %in% c("", NA_character_)) ||
-    any(duplicated(names(variables)))
-  ) {
-    stop(
-      "All elements of argument 'variables' must have valid and unique names"
-    )
   }
 
   if (!missing(permissions)) {
     if (!is(permissions, "operendPermissions")) {
       stop("Argument 'permissions' must be an operendPermissions object")
     }
+  }
+
+  if (missing(variables) && missing(permissions)) {
+    stop(
+      "If argument 'variables' is missing, argument 'permissions' is required"
+    )
   }
 
   verbosity <- suppressWarnings(as.integer(verbosity))

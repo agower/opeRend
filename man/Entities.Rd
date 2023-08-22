@@ -37,9 +37,7 @@ updateEntity(
 record to be added, deleted, retrieved, or updated}
 
 \item{variables}{Additional arguments specifying variables of the \code{Entity}
-record to be added or updated, or variables on which to limit a listing;
-in \code{updateEntity}, this argument is required if argument
-\code{permissions} is missing}
+record to be added or updated, or variables on which to limit a listing}
 
 \item{permissions}{An optional \code{\linkS4class{operendPermissions}} object
 specifying the permissions to be used when creating or updating the record}
@@ -70,6 +68,10 @@ Defaults to \code{getOption("opeRend")$verbosity}.}
 \description{
 These functions attempt to add, delete, retrieve or update an \code{Entity}
 record, or to list \code{Entity} records.
+}
+\details{
+If \code{updateEntity} is called without argument \code{variables},
+the argument \code{permissions} \emph{must} be provided.
 }
 \author{
 Adam C. Gower \email{agower@bu.edu}

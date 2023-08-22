@@ -77,9 +77,18 @@ addWorkFile <- function (
   if (missing(file)) {
     stop("Argument 'file' is required")
   } else if (is.character(file) && length(file) == 1) {
-    if (!file.exists(file)) {
-      stop(paste("File", sQuote(file), "does not exist"))
-    }
+    # Use normalizePath() to expand path to file,
+    # converting any warning to an error
+    file <- tryCatch(
+      normalizePath(file, mustWork=NA),
+      warning = function (condition) {
+        stop(
+          "Invalid filename ", sQuote(file), ":\n",
+          condition$message,
+          call. = FALSE
+        )
+      }
+    )
   } else if (!is(file, "connection")) {
     stop("Argument 'file' must be a character string or a connection")
   }

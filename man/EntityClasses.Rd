@@ -9,7 +9,7 @@
 \alias{updateEntityClass}
 \title{Add, delete, retrieve, update, or list EntityClass record(s)}
 \usage{
-addEntityClass(file, verbosity = getOption("opeRend")$verbosity)
+addEntityClass(file, permissions, verbosity = getOption("opeRend")$verbosity)
 
 deleteEntityClass(name, verbosity = getOption("opeRend")$verbosity)
 
@@ -17,7 +17,12 @@ getEntityClass(name, verbosity = getOption("opeRend")$verbosity)
 
 listEntityClasses()
 
-updateEntityClass(file, verbosity = getOption("opeRend")$verbosity)
+updateEntityClass(
+  name,
+  file,
+  permissions,
+  verbosity = getOption("opeRend")$verbosity
+)
 }
 \arguments{
 \item{file}{One of the following:
@@ -33,6 +38,9 @@ updateEntityClass(file, verbosity = getOption("opeRend")$verbosity)
   }
 }}
 
+\item{permissions}{An optional \code{\linkS4class{operendPermissions}} object
+specifying the permissions to be used when creating or updating the record}
+
 \item{verbosity}{A value coercible to a nonnegative integer, specifying the verbosity level.
 A value of FALSE, TRUE, 0 or 1 does not produce any messages.
 A value of 2 instructs the curl calls to produce verbose output.
@@ -41,7 +49,7 @@ A value greater than 2 produces additional output, including the value of the
 Defaults to \code{getOption("opeRend")$verbosity}.}
 
 \item{name}{A character string specifying the name of an \code{EntityClass}
-record to be deleted or retrieved}
+record to be deleted, retrieved, or updated}
 }
 \value{
 \describe{
@@ -65,6 +73,10 @@ record to be deleted or retrieved}
 \description{
 These functions attempt to add, delete, retrieve or update an
 \code{EntityClass} record, or to list \code{EntityClass} records.
+}
+\details{
+If \code{updateEntityClass} is called without argument \code{file}, both of
+the arguments \code{name} and \code{permissions} \emph{must} be provided.
 }
 \author{
 Adam C. Gower \email{agower@bu.edu}
