@@ -11,10 +11,14 @@
 #' @param jobType
 #' A character string specifying the type of JobRuns to list.
 #' @param verbosity
-#' A value coercible to a nonnegative integer, specifying the verbosity level.
-#' A value of FALSE, TRUE, 0 or 1 does not produce any messages.
-#' A value of 2 instructs the curl calls to produce verbose output.
-#' A value greater than 2 produces additional output.
+#' An integer-coercible value specifying the verbosity level:
+#' \describe{
+#'   \item{\code{0}}{Do not print messages}
+#'   \item{\code{1}}{Print only high-level messages}
+#'   \item{\code{2}}{Show headers}
+#'   \item{\code{3}}{Show headers and bodies}
+#'   \item{\code{4+}}{Show headers, bodies, and curl status messages}
+#' }
 #' Defaults to \code{getOption("opeRend")$verbosity}.
 #' @return
 #' \describe{
@@ -35,7 +39,7 @@
 #' @author Adam C. Gower \email{agower@@bu.edu}
 
 #' @export
-deleteJobRun <- function (id, verbosity=getOption("opeRend")$verbosity)
+deleteJobRun <- function (id, verbosity = getOption("opeRend")$verbosity)
 {
   # Check arguments for errors
   if (missing(id)) {
@@ -55,8 +59,7 @@ deleteJobRun <- function (id, verbosity=getOption("opeRend")$verbosity)
 
   # Submit a DELETE request and stop if an error is returned
   response <- operendApiCall(
-    url = operendApiUrl("JobRuns", id), method = "DELETE",
-    verbosity = verbosity
+    path = c("JobRuns", id), method = "DELETE", verbosity = verbosity
   )
   # If the API call did not throw an error, print a message if requested,
   # and return TRUE, invisibly
@@ -80,7 +83,7 @@ getJobRun <- function (id)
     }
   }
   operendPostprocess(
-    operendApiCall(url=operendApiUrl("JobRuns", id), method="GET")
+    operendApiCall(path = c("JobRuns", id), method = "GET")
   )
 }
 
@@ -101,7 +104,7 @@ listJobRuns <- function (jobType = "")
     "operendJobRunList",
     listData = operendPostprocess(
       operendApiCall(
-        url = operendApiUrl("JobRuns", query = operendPreprocess(fields)),
+        path = "JobRuns", query = operendPreprocess(fields),
         method = "GET"
       )
     )

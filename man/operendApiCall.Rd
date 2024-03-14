@@ -5,33 +5,52 @@
 \title{Perform an Operend API call}
 \usage{
 operendApiCall(
-  url,
+  path,
+  query,
+  baseUrl = getOption("opeRend")$api_base_url,
   method = c("GET", "POST", "PUT", "DELETE"),
   accept = c("application/json", "application/octet-stream"),
   content,
   contentType = c("application/json", "application/octet-stream"),
+  contentIsFilePath = FALSE,
+  simplifyDataFrame = FALSE,
   verbosity = getOption("opeRend")$verbosity
 )
 }
 \arguments{
-\item{url}{A character string specifying the URL to which an API call will be made}
+\item{path}{A character vector denoting values to be used to construct the path}
 
-\item{method}{A character string specifying the method to be used to submit the API call}
+\item{query}{An optional named list with one item (value) for each query parameter, with
+the names of the list items corresponding to the names of the parameters}
+
+\item{baseUrl}{A character string specifying the API base URL;
+defaults to \code{getOption("opeRend")$api_base_url}}
+
+\item{method}{A character string specifying the HTTP method to use to submit the API call}
 
 \item{accept}{A character string specifying the "Accept" HTTP header to be passed to
-\code{curlPerform}; defaults to \code{"application/json"}}
+\code{req_perform}; defaults to \code{"application/json"}}
 
 \item{content}{An optional variable specifying the content to be uploaded during a POST or
 PUT request}
 
 \item{contentType}{A character string specifying the "Content-Type" HTTP header to be passed to
-\code{curlPerform}; defaults to \code{"application/json"}}
+\code{req_perform}; defaults to \code{"application/json"}}
 
-\item{verbosity}{A logical or nonnegative numeric value specifying the verbosity level.
-A value of FALSE, TRUE, 0 or 1 does not produce any messages.
-A value of 2 instructs the curl calls to produce verbose output.
-A value greater than 2 produces additional output, including the value of the
-\code{content} parameter.
+\item{contentIsFilePath}{A logical variable specifying whether \code{content} contains a file path}
+
+\item{simplifyDataFrame}{A logical variable to be passed to \code{\link[jsonlite]{fromJSON}}
+specifying whether to coerce JSON arrays containing only records
+(JSON objects) into a data frame; defaults to FALSE}
+
+\item{verbosity}{An integer-coercible value specifying the verbosity level:
+\describe{
+  \item{\code{0}}{Do not print messages}
+  \item{\code{1}}{Print only high-level messages}
+  \item{\code{2}}{Show headers}
+  \item{\code{3}}{Show headers and bodies}
+  \item{\code{4+}}{Show headers, bodies, and curl status messages}
+}
 Defaults to \code{getOption("opeRend")$verbosity}.}
 }
 \value{
@@ -40,24 +59,20 @@ containing a message constructed from the HTTP response body.
 Otherwise:
 \itemize{
   \item{
-    If the \code{Content-Type} attribute of the HTTP response body is set to
+    If the \code{Content-Type} of the HTTP response is set to
     \code{'application/json'}, the response body is converted from JSON to an
     R object, and that object is returned.
   }
   \item{
-    If that attribute is set to anything else (or does not exist), the HTTP
-    response body itself is returned.
+    If the \code{Content-Type} is set to anything else (or is NA),
+    the HTTP response body is returned as is.
   }
 }
 }
 \description{
-This function uses \code{\link{curlPerform}} to carry out Operend API calls,
+This function first constructs an Operend API URL with specified parameters
+and then uses \code{\link[httr2]{req_perform}} to carry out the call,
 converting all input and output to/from JSON as needed.
-}
-\details{
-\code{\link{curlPerform}} is used in place of \code{\link{getURL}}
-(which does not collect the HTTP header) and \code{\link{getURLContent}}
-(which does not return the HTTP response body in the event of an HTTP error)
 }
 \author{
 Adam C. Gower \email{agower@bu.edu}

@@ -1,68 +1,95 @@
-#' @import RCurl rjson
-# Note: '@import utils' causes a namespace conflict with S4Vectors
-#' @importFrom utils URLencode
+#' @import httr2
+#' @importFrom jsonlite toJSON
 
 #' @title Perform an Operend API call
 #' @rdname operendApiCall
 #' @name operendApiCall
 #' @description
-#' This function uses \code{\link{curlPerform}} to carry out Operend API calls,
+#' This function first constructs an Operend API URL with specified parameters
+#' and then uses \code{\link[httr2]{req_perform}} to carry out the call,
 #' converting all input and output to/from JSON as needed.
-#' @param url
-#' A character string specifying the URL to which an API call will be made
+#' @param path
+#' A character vector denoting values to be used to construct the path
+#' @param query
+#' An optional named list with one item (value) for each query parameter, with
+#' the names of the list items corresponding to the names of the parameters
+#' @param baseUrl
+#' A character string specifying the API base URL;
+#' defaults to \code{getOption("opeRend")$api_base_url}
 #' @param method
-#' A character string specifying the method to be used to submit the API call
+#' A character string specifying the HTTP method to use to submit the API call
 #' @param accept
 #' A character string specifying the "Accept" HTTP header to be passed to
-#' \code{curlPerform}; defaults to \code{"application/json"}
+#' \code{req_perform}; defaults to \code{"application/json"}
 #' @param content
 #' An optional variable specifying the content to be uploaded during a POST or
 #' PUT request
 #' @param contentType
 #' A character string specifying the "Content-Type" HTTP header to be passed to
-#' \code{curlPerform}; defaults to \code{"application/json"}
+#' \code{req_perform}; defaults to \code{"application/json"}
+#' @param contentIsFilePath
+#' A logical variable specifying whether \code{content} contains a file path
+#' @param simplifyDataFrame
+#' A logical variable to be passed to \code{\link[jsonlite]{fromJSON}}
+#' specifying whether to coerce JSON arrays containing only records
+#' (JSON objects) into a data frame; defaults to FALSE
 #' @param verbosity
-#' A logical or nonnegative numeric value specifying the verbosity level.
-#' A value of FALSE, TRUE, 0 or 1 does not produce any messages.
-#' A value of 2 instructs the curl calls to produce verbose output.
-#' A value greater than 2 produces additional output, including the value of the
-#' \code{content} parameter.
+#' An integer-coercible value specifying the verbosity level:
+#' \describe{
+#'   \item{\code{0}}{Do not print messages}
+#'   \item{\code{1}}{Print only high-level messages}
+#'   \item{\code{2}}{Show headers}
+#'   \item{\code{3}}{Show headers and bodies}
+#'   \item{\code{4+}}{Show headers, bodies, and curl status messages}
+#' }
 #' Defaults to \code{getOption("opeRend")$verbosity}.
-#' @details
-#' \code{\link{curlPerform}} is used in place of \code{\link{getURL}}
-#' (which does not collect the HTTP header) and \code{\link{getURLContent}}
-#' (which does not return the HTTP response body in the event of an HTTP error)
 #' @return
 #' If an error is encountered, an error is thrown,
 #' containing a message constructed from the HTTP response body.
 #' Otherwise:
 #' \itemize{
 #'   \item{
-#'     If the \code{Content-Type} attribute of the HTTP response body is set to
+#'     If the \code{Content-Type} of the HTTP response is set to
 #'     \code{'application/json'}, the response body is converted from JSON to an
 #'     R object, and that object is returned.
 #'   }
 #'   \item{
-#'     If that attribute is set to anything else (or does not exist), the HTTP
-#'     response body itself is returned.
+#'     If the \code{Content-Type} is set to anything else (or is NA),
+#'     the HTTP response body is returned as is.
 #'   }
 #' }
 #' @author Adam C. Gower \email{agower@@bu.edu}
 
 operendApiCall <- function (
-  url, method = c("GET", "POST", "PUT", "DELETE"),
+  path, query, baseUrl = getOption("opeRend")$api_base_url,
+  method = c("GET", "POST", "PUT", "DELETE"),
   accept = c("application/json", "application/octet-stream"),
   content,
   contentType = c("application/json", "application/octet-stream"),
+  contentIsFilePath = FALSE,
+  simplifyDataFrame = FALSE,
   verbosity = getOption("opeRend")$verbosity
 )
 {
-  # Check arguments for errors
-  if (missing(url)) {
-    stop("Argument 'url' is required")
+  if (missing(path)) {
+    stop("Argument 'path' is required")
+  } else if (!(is.character(path))) {
+    stop("Argument 'path' must be a character vector")
   }
-  if (!(is.character(url) && length(url) == 1)) {
-    stop("Argument 'url' must be a character string")
+  if (!missing(query)) {
+    if (!is.list(query)) {
+      stop("Argument 'query' must be a list")
+    } else if (length(query)) {
+      if (
+        !all(sapply(query, is.atomic) & sapply(query, length) == 1) ||
+        is.null(names(query)) || any(is.na(names(query)))
+      ) {
+        stop("Argument 'query' must be a fully named list of atomic values")
+      }
+    }
+  }
+  if (!(is.character(baseUrl) && length(baseUrl) == 1)) {
+    stop("Argument 'baseUrl' must be a character string")
   }
   method <- match.arg(method)
   accept <- match.arg(accept)
@@ -77,6 +104,18 @@ operendApiCall <- function (
   } else {
     contentType <- match.arg(contentType)
   }
+  if (
+    !is.logical(contentIsFilePath) || length(contentIsFilePath) != 1 ||
+    is.na(contentIsFilePath)
+  ) {
+    stop("Argument 'contentIsFilePath' must be a non-NA logical value")
+  }
+  if (
+    !is.logical(simplifyDataFrame) || length(simplifyDataFrame) != 1 ||
+    is.na(simplifyDataFrame)
+  ) {
+    stop("Argument 'simplifyDataFrame' must be a non-NA logical value")
+  }
   verbosity <- suppressWarnings(as.integer(verbosity))
   if (length(verbosity) != 1 || is.na(verbosity) || verbosity < 0) {
     stop(
@@ -88,130 +127,106 @@ operendApiCall <- function (
     stop("A valid token must be stored in options('opeRend')")
   }
 
-  # Ensure that URL is properly encoded
-  url <- URLencode(url)
+  # Prepare the httr2_request object ###########################################
 
-  # Convert 'content' argument if needed
-  if (!missing(content)) {
-    if (contentType == "application/json") {
-      if (is(try(rjson::fromJSON(content), silent=TRUE), "try-error")) {
-        content <- rjson::toJSON(content)
-      }
-    }
-    # According to the code for httpPUT(), it appears that the content must be
-    # converted to a raw vector before uploading
-    if (contentType == "application/octet-stream" || method == "PUT") {
-      if (is.character(content)) {
-        content <- charToRaw(content) 
-      } else {
-        content <- as.raw(content)
-      }
-    }
+  req <- request(baseUrl)
+  if (!missing(path)) {
+    req <- do.call(
+      req_url_path_append, args = c(list(req = req), as.list(path))
+    )
+  }
+  if (!missing(query)) {
+    req <- do.call(req_url_query, args = c(list(.req = req), query))
   }
 
   # Create HTTP header, including authorization token
   # Note: if contentType is NULL, it will be excluded from the header
-  httpheader <- c(
+  req <- req_headers(
+    .req = req,
     "Accept"        = accept,
     "Content-Type"  = contentType,
     "Authorization" = paste("Bearer", getOption("opeRend")$token@secret)
   )
+  # Add HTTP method to request object
+  req <- req_method(req, method = method)
 
-  # Create a new CURLHandle object
-  curl <- getCurlHandle()
-  # Create list of functions to update and query a shared state across calls
-  curl_reader <- dynCurlReader(curl, baseURL=url)
-  # Initialize list of CURLOptions to be used with curlPerform()
-  .opts <- list(
-    customrequest  = method,
-    headerfunction = curl_reader$update,
-    # Note: httpauth=TRUE is required to make API calls
-    #       to Entities and EntityClasses endpoints,
-    #       which return HTTP code 200 even without any credentials
-    httpauth       = TRUE,
-    httpheader     = httpheader,
-    url            = url,
-    verbose        = verbosity > 1
+  # Add content to request body if provided
+  if (!missing(content)) {
+    if (contentIsFilePath) {
+      req <- req_body_file(req, path = content)
+    } else if (contentType == "application/json") {
+      req <- req_body_json(req, data = content, auto_unbox = TRUE)
+    } else {
+      req <- req_body_raw(req, body = content)
+    }
+  }
+
+  # Suppress any errors when performing the HTTP request
+  req <- req_error(req, is_error = function (resp) FALSE)
+
+  # Perform the HTTP request ###################################################
+
+  # Note: the following command may generate a warning about closing an unused
+  #       connection.
+  #
+  # The call:
+  #   httr2::req_perform() -> httr2::req_handle() -> req_body_apply()
+  # opens a connection to the file, and also defines the 'readfunction' element
+  # of the httr2_request object.
+  #
+  # The subsequent call:
+  #   httr2::req_perform() -> httr2::req_perform1() -> curl::curl_fetch_memory()
+  # calls readfunction() to read 64KB from the connection at a time,
+  # closing the connection if < 64KB is not read (i.e., in the last pass).
+  #
+  # However, as commented in in httr2::req_body_apply(), readfunction():
+  #   "Leaks connection if request doesn't complete"
+  #
+  # If the file size is an exact multiple of 64KB, readfunction() is not called
+  # after the last 64KB is read, and so the connection remains open after
+  # req_perform() terminates.
+  #
+  # Garbage collection will automatically close this unused connection with a
+  # warning; unfortunately, there is no way to suppress this warning,
+  # even with suppressWarnings().
+
+  response <- req_perform(
+    req = req, verbosity = pmin(pmax(verbosity - 1, 0), 3)
   )
-  # Add method-specific CURLOptions
-  if (method == "POST") {
-    .opts <- c(.opts, list(post=TRUE, postfields=content))
-  } else if (method == "PUT") {
-    .opts <- c(
-      .opts,
-      list(infilesize=length(content), readfunction=content, upload=TRUE)
+
+  # Process the HTTP response ##################################################
+
+  if (resp_is_error(response)) {
+    # If there was an error, retrieve any error message,
+    # and try to convert the character string from JSON to a list if possible
+    responseBody <- tryCatch(
+      resp_body_json(response),
+      error = function (condition) resp_body_string(response)
     )
-  }
-  # Set the CURLOptions and protect them from garbage collection
-  curlSetOpt(.opts=.opts, curl=curl, .isProtected=TRUE)
-
-  # Print additional debugging output if requested
-  if (verbosity > 2) {
-    cat(sprintf("URL: %s\n", url))
-    cat(sprintf("Method: %s\n", method))
-    cat("HTTP header:\n")
-    print(httpheader)
-    if (isTRUE(contentType == "application/json")) {
-      if (is.raw(content)) cat(rawToChar(content)) else cat(content)
-      cat("\n")
-    }
-  }
-
-  # Submit an HTTP request to the specified URL, throwing an error if necessary
-  # (without printing the call, as this is a server error, not an R error)
-  curlPerformResult <- tryCatch(
-    curlPerform(curl = curl),
-    error = function (condition) stop(condition$message, call. = FALSE)
-  )
-
-  # Extract HTTP response body and process according to content type
-  response <- curl_reader$value()
-  if (!is.null(attr(response, "Content-Type"))) {
-    # Sometimes the HTTP response has been observed to come back with
-    # Content-Type "application/octet-stream" (i.e., raw) when it
-    # should really be "text/plain" (i.e., character); this workaround is used
-    # to coerce the raw response back to character
-    responseContentType <- attr(response, "Content-Type")
-    if (responseContentType == "application/octet-stream") {
-      if (accept != "application/octet-stream") {
-        response <- rawToChar(response)
-      }
-    } else if (responseContentType == "application/json") {
-      # tryCatch() prevents fromJSON() from throwing an error if invalid JSON
-      # is returned in the response (e.g., when a Group is deleted)
-      response <- tryCatch(
-        rjson::fromJSON(response), error = function (condition) response
-      )
-    }
-    # Clear the 'Content-Type' attribute so that any raw data returned
-    # will be a proper vector (i.e., no attributes other than names)
-    attr(response, "Content-Type") <- NULL
-  }
-
-  # Extract HTTP header and status code
-  header <- parseHTTPHeader(curl_reader$header())
-  httpStatusCode <- as.integer(header["status"])
-  if (httpStatusCode >= 400) {
-    # If there was an error, first convert any raw error message to character
-    if (is.raw(response)) {
-      response <- rawToChar(response)
-    }
-    # Then, try to convert the character string from JSON to a list if possible
-    if (is.character(response)) {
-      response <- tryCatch(
-        rjson::fromJSON(response), error = function (condition) response
-      )
-    }
     errorMessage <- ifelse(
-      is.list(response),
-      sprintf("%s (Operend error code %s)", response$error, response$errorCode),
-      response
+      is.list(responseBody),
+      sprintf(
+        "%s (Operend error code %s)", responseBody$error, responseBody$errorCode
+      ),
+      responseBody
     )
-    # Throw the error message
-    # (without printing the call, as this is a server error, not an R error)
+    # Throw the error message without printing the call,
+    # as this is a server error, not an R error, and that may confuse the user
     stop(errorMessage, call. = FALSE)
   } else {
-    # Otherwise, return the response
-    response
+    # Otherwise, parse and return the response body
+    responseContentType <- resp_content_type(response)
+    if (is.na(responseContentType)) {
+      resp_body_raw(response)
+    } else {
+      if (responseContentType == "application/octet-stream") {
+        resp_body_raw(response)
+      } else if (responseContentType == "application/json") {
+        resp_body_json(
+          response, simplifyVector = TRUE,
+          simplifyDataFrame = simplifyDataFrame, simplifyMatrix = FALSE
+        )
+      }
+    }
   }
 }

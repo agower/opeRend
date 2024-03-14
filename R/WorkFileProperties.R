@@ -21,10 +21,14 @@
 #' A logical value specifying whether to return the listing as a data frame.
 #' Defaults to \code{FALSE}.
 #' @param verbosity
-#' A value coercible to a nonnegative integer, specifying the verbosity level.
-#' A value of FALSE, TRUE, 0 or 1 does not produce any messages.
-#' A value of 2 instructs the curl calls to produce verbose output.
-#' A value greater than 2 produces additional output.
+#' An integer-coercible value specifying the verbosity level:
+#' \describe{
+#'   \item{\code{0}}{Do not print messages}
+#'   \item{\code{1}}{Print only high-level messages}
+#'   \item{\code{2}}{Show headers}
+#'   \item{\code{3}}{Show headers and bodies}
+#'   \item{\code{4+}}{Show headers, bodies, and curl status messages}
+#' }
 #' Defaults to \code{getOption("opeRend")$verbosity}.
 #' @return
 #' \describe{
@@ -66,16 +70,13 @@ getWorkFileProperties <- function (id)
   # Submit a GET request and return the response as
   # an operendWorkFileProperties object
   operendPostprocess(
-    operendApiCall(
-      url = operendApiUrl("WorkFileProperties", as.character(id)),
-      method = "GET"
-    )
+    operendApiCall(path = c("WorkFileProperties", id), method = "GET")
   )
 }
 
 #' @export
 #' @rdname WorkFileProperties
-listWorkFileProperties <- function (..., isTrashed=FALSE, asDataFrame=FALSE)
+listWorkFileProperties <- function (..., isTrashed = FALSE, asDataFrame = FALSE)
 {
   isTrashed <- suppressWarnings(as.logical(isTrashed))
   if (length(isTrashed) != 1) {
@@ -95,33 +96,48 @@ listWorkFileProperties <- function (..., isTrashed=FALSE, asDataFrame=FALSE)
   # If isTrashed is set to TRUE or FALSE, limit the result accordingly;
   # otherwise, return all matching results regardless of trashed status
   if (!is.na(isTrashed)) fields$isTrashed <- isTrashed
-  # Submit a GET request and return the response as
-  # an operendWorkFilePropertiesList object
-  result <- new(
-    "operendWorkFilePropertiesList",
-    listData = operendPostprocess(
-      operendApiCall(
-        url = operendApiUrl(
-          "WorkFileProperties", query = operendPreprocess(fields)
-        ),
-        method = "GET"
-      )
-    )
+  # Submit GET request, converting result to data frame if requested
+  result <- operendApiCall(
+    path = "WorkFileProperties", query = operendPreprocess(fields),
+    method = "GET", simplifyDataFrame = asDataFrame
   )
-  # Then, if requested, convert to a data frame
-  if (asDataFrame) as(result, "data.frame") else result
+  # If the result was requested as a data frame, convert column 'permissions'
+  # from data frame to a character representation of operendPermissions objects;
+  # otherwise, convert the result to an operendWorkFilePropertiesList object
+  if (asDataFrame) {
+    if (length(result)) {
+      result$permissions <- apply(result$permissions, 1, as.list)
+      result$permissions <- lapply(result$permissions, lapply, as.character)
+      # Remove empty elements using base::Filter()
+      result$permissions <- lapply(result$permissions, FUN = Filter, f = length)
+      result$permissions <- mapply(
+        do.call, what = "operendPermissions", args = result$permissions
+      )
+      result$permissions <- sapply(result$permissions, as, "character")
+    } else {
+      # If the result is empty, return an empty data frame
+      result <- data.frame()
+      result[slotNames("operendWorkFileProperties")] <- list(character(0))
+    }
+  } else {
+    result <- new(
+      "operendWorkFilePropertiesList", listData = operendPostprocess(result)
+    )
+  }
+  # Return result
+  result
 }
 #' @export
 #' @rdname WorkFileProperties
-listWorkFiles <- function (..., isTrashed=FALSE, asDataFrame=FALSE)
+listWorkFiles <- function (..., isTrashed = FALSE, asDataFrame = FALSE)
 {
-  listWorkFileProperties(..., isTrashed=isTrashed, asDataFrame=asDataFrame)
+  listWorkFileProperties(..., isTrashed = isTrashed, asDataFrame = asDataFrame)
 }
 
 #' @export
 #' @rdname WorkFileProperties
 updateWorkFileProperties <- function (
-  id, ..., verbosity=getOption("opeRend")$verbosity
+  id, ..., verbosity = getOption("opeRend")$verbosity
 )
 {
   # Check arguments for errors
@@ -143,7 +159,7 @@ updateWorkFileProperties <- function (
   # Submit a PUT request and convert the response to a WorkFileProperties object
   result <- operendPostprocess(
     operendApiCall(
-      url = operendApiUrl("WorkFileProperties", id), method = "PUT",
+      path = c("WorkFileProperties", id), method = "PUT",
       content = operendPreprocess(list(...)),
       verbosity = verbosity
     )

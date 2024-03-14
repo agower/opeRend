@@ -32,10 +32,14 @@ and untrashed records are returned.}
 \item{asDataFrame}{A logical value specifying whether to return the listing as a data frame.
 Defaults to \code{FALSE}.}
 
-\item{verbosity}{A value coercible to a nonnegative integer, specifying the verbosity level.
-A value of FALSE, TRUE, 0 or 1 does not produce any messages.
-A value of 2 instructs the curl calls to produce verbose output.
-A value greater than 2 produces additional output.
+\item{verbosity}{An integer-coercible value specifying the verbosity level:
+\describe{
+  \item{\code{0}}{Do not print messages}
+  \item{\code{1}}{Print only high-level messages}
+  \item{\code{2}}{Show headers}
+  \item{\code{3}}{Show headers and bodies}
+  \item{\code{4+}}{Show headers, bodies, and curl status messages}
+}
 Defaults to \code{getOption("opeRend")$verbosity}.}
 }
 \value{

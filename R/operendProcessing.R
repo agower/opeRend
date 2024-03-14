@@ -36,12 +36,13 @@ operendPreprocess <- function (x)
   # Coerce any operendDate objects to character vectors
   # to enable conversion to JSON
   x <- rapply(
-    x, f=as, Class="character", classes="operendDate", how="replace"
+    x, f = as, Class = "character", classes = "operendDate", how = "replace"
   )
   # Coerce any operendPermissions objects to lists of lists
   # to ensure that group-specific permissions are converted to JSON arrays
   x <- rapply(
-    x, f=lapply, FUN=as.list, classes="operendPermissions", how="replace"
+    x,
+    f = lapply, FUN = as.list, classes = "operendPermissions", how = "replace"
   )
 
   # Return the preprocessed list
@@ -66,7 +67,9 @@ operendPostprocess <- function (x)
     if (atomicInput) {
       if (extends(Class, "SimpleList")) {
         elementType <- getClass(Class)@prototype@elementType
-        x <- do.call(Class, args=lapply(x, convertVector, Class=elementType))
+        x <- do.call(
+          Class, args = lapply(x, convertVector, Class = elementType)
+        )
         return(x)
       } else {
         x <- list(x)
@@ -80,7 +83,7 @@ operendPostprocess <- function (x)
       if (Class == "operendEntity") {
         # operendEntity objects contain metadata slots (names begin with '_')
         # as well as a list of variables, stored in slot '.Data'
-        slotNames <- grep("^_", names(x), value=TRUE)
+        slotNames <- grep("^_", names(x), value = TRUE)
         toClasses <- slots[slotNames]
         elementNames <- setdiff(names(x), slotNames)
         if (length(elementNames)) {
@@ -97,8 +100,9 @@ operendPostprocess <- function (x)
           variables <- get(entityClass, operendEntityClassCache)@variables
           # Convenience vector to translate Entity variable types to R classes
           variableRClasses <- c(
-            B="logical", C="factor", D="operendDate", E="character",
-            F="numeric", I="integer", J="integer", T="character", W="integer"
+            B = "logical", C = "factor", D = "operendDate", E = "character",
+            F = "numeric", I = "integer", J = "integer", T = "character",
+            W = "integer"
           )
           toClasses[elementNames] <- variableRClasses[
             sapply(variables[elementNames], slot, "type")
@@ -121,7 +125,7 @@ operendPostprocess <- function (x)
           elementType <- getClass(toClass)@prototype@elementType
           x[[i]] <- do.call(
             toClass,
-            args=lapply(x[[i]], convertVector, Class=elementType)
+            args = lapply(x[[i]], convertVector, Class = elementType)
           )
         } else {
           # Create the object, trying approaches in the following order:
@@ -132,21 +136,21 @@ operendPostprocess <- function (x)
           if (toClass == "character") {
             # Coerce list to a vector before changing storage mode
             if (is.list(x[[i]]) && length(x[[i]])) {
-              x[[i]] <- unlist(x[[i]], recursive=FALSE)
+              x[[i]] <- unlist(x[[i]], recursive = FALSE)
             }
             storage.mode(x[[i]]) <- "character"
           } else if (
-            hasMethod("coerce", signature(from=class(x[[i]]), to=toClass))
+            hasMethod("coerce", signature(from = class(x[[i]]), to = toClass))
           ) {
             x[[i]] <- as(x[[i]], toClass)
-          } else if (exists(toClass, mode="function")) {
+          } else if (exists(toClass, mode = "function")) {
             if (is.list(x[[i]])) {
-              x[[i]] <- do.call(toClass, args=x[[i]])
+              x[[i]] <- do.call(toClass, args = x[[i]])
             } else {
-              x[[i]] <- do.call(toClass, args=list(x[[i]]))
+              x[[i]] <- do.call(toClass, args = list(x[[i]]))
             }
           } else {
-            x[[i]] <- do.call(new, args=list(Class=toClass, x[[i]]))
+            x[[i]] <- do.call(new, args = list(Class = toClass, x[[i]]))
           }
         }
       }
@@ -157,15 +161,15 @@ operendPostprocess <- function (x)
     # Note: new("operendEntity") _only_ works properly if slot .Data
     #       is specified _before_ the other slot names!
     if (Class == "operendEntity") {
-      x <- c(list(.Data=x[elementNames]), x[slotNames])
+      x <- c(list(.Data = x[elementNames]), x[slotNames])
     }
 
     # Create and return an object of specified class, using a helper function
     # (if one exists, and the object is not atomic) or new() otherwise
-    if (exists(Class, mode="function") && !atomicInput) {
-      do.call(Class, args=x)
+    if (exists(Class, mode = "function") && !atomicInput) {
+      do.call(Class, args = x)
     } else {
-      do.call(new, args=c(Class=Class, x))
+      do.call(new, args = c(Class = Class, x))
     }
   }
 
@@ -181,7 +185,7 @@ operendPostprocess <- function (x)
     # (or, if the list has no names, the names of its first element)
     objectNames <- if (listCall) names(x[[1]]) else names(x)
     if ("_entity_id" %in% objectNames) {
-      # An Entity record may have variables with names that overlap with the slot
+      # An Entity record may have variables with names that overlap with slot
       # names of other S4 object classes, so this case is handled separately
       Class <- "operendEntity"
     } else {

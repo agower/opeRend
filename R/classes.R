@@ -1,4 +1,4 @@
-#' @import methods RCurl S4Vectors
+#' @import methods S4Vectors
 
 # Classes are placed roughly in order of dependence and sorted alphabetically
 # where possible.
@@ -20,7 +20,7 @@ validateOperendSimpleList <- function (object) {
       paste("Slot 'elementType' must be set to", sQuote(elementType))
     } else {
       # If so, then perform basic SimpleList validity check
-      validObject(as(object, "SimpleList"), test=TRUE)
+      validObject(as(object, "SimpleList"), test = TRUE)
     }
   }
 }
@@ -65,7 +65,7 @@ operendDate <- setClass(
 
 setClass(
   "operendPermissions",
-  prototype = new("SimpleList", elementType="character"),
+  prototype = new("SimpleList", elementType = "character"),
   validity = function (object)
   {
     # First perform standard validity check
@@ -92,7 +92,7 @@ setClass(
             errors,
             paste(
               "Values in", sQuote(name), "must be one of the following:",
-              paste(sQuote(operations), collapse=",")
+              paste(sQuote(operations), collapse = ",")
             )
           )
         }
@@ -109,9 +109,9 @@ setClass(
 #' @param _other
 #' Argument containing permissions for all other groups
 
-operendPermissions <- function (..., `_other`=character())
+operendPermissions <- function (..., `_other` = character())
 {
-  new("operendPermissions", listData=list(..., `_other`=`_other`))
+  new("operendPermissions", listData = list(..., `_other` = `_other`))
 }
 
 #' @export operendToken
@@ -287,7 +287,7 @@ operendUser <- setClass(
 # Container for a list of operendUser objects
 setClass(
   "operendUserList",
-  prototype = new("SimpleList", elementType="operendUser"),
+  prototype = new("SimpleList", elementType = "operendUser"),
   validity = validateOperendSimpleList,
   contains = "SimpleList"
 )
@@ -298,7 +298,7 @@ setClass(
 
 operendUserList <- function (...)
 {
-  new("operendUserList", listData=list(...))
+  new("operendUserList", listData = list(...))
 }
 
 #' @export operendGroup
@@ -342,7 +342,7 @@ operendGroup <- setClass(
 # Container for a list of operendGroup objects
 setClass(
   "operendGroupList",
-  prototype = new("SimpleList", elementType="operendGroup"),
+  prototype = new("SimpleList", elementType = "operendGroup"),
   validity = validateOperendSimpleList,
   contains = "SimpleList"
 )
@@ -353,7 +353,7 @@ setClass(
 
 operendGroupList <- function (...)
 {
-  new("operendGroupList", listData=list(...))
+  new("operendGroupList", listData = list(...))
 }
 
 # WorkFile-related classes #####################################################
@@ -371,7 +371,7 @@ operendGroupList <- function (...)
 # SimpleList of integer vectors
 setClass(
   "operendWorkFileIdList",
-  prototype = new("SimpleList", elementType="integer"),
+  prototype = new("SimpleList", elementType = "integer"),
   validity = validateOperendSimpleList,
   contains = "SimpleList"
 )
@@ -382,7 +382,7 @@ setClass(
 
 operendWorkFileIdList <- function (...)
 {
-  new("operendWorkFileIdList", listData=list(...))
+  new("operendWorkFileIdList", listData = list(...))
 }
 
 #' @export operendWorkFileProperties
@@ -465,7 +465,7 @@ operendWorkFileProperties <- setClass(
     creatorJobRun        = 0L,
     originalName         = "",
     originalModifiedTime = operendDate(
-      as.POSIXct(-1, origin="1970-01-01", tz=getOption("opeRend")$timezone)
+      as.POSIXct(-1, origin = "1970-01-01", tz = getOption("opeRend")$timezone)
     ),
     fileType             = "",
     isTrashed            = FALSE,
@@ -489,7 +489,7 @@ operendWorkFileProperties <- setClass(
 # Container for a list of operendWorkFileProperties objects
 setClass(
   "operendWorkFilePropertiesList",
-  prototype = new("SimpleList", elementType="operendWorkFileProperties"),
+  prototype = new("SimpleList", elementType = "operendWorkFileProperties"),
   validity = validateOperendSimpleList,
   contains = "SimpleList"
 )
@@ -500,7 +500,7 @@ setClass(
 
 operendWorkFilePropertiesList <- function (...)
 {
-  new("operendWorkFilePropertiesList", listData=list(...))
+  new("operendWorkFilePropertiesList", listData = list(...))
 }
 
 #' @export operendWorkFile
@@ -515,7 +515,7 @@ operendWorkFilePropertiesList <- function (...)
 
 setClass(
   "operendWorkFile",
-  contains="url"
+  contains = "url"
 )
 
 #' @rdname operendWorkFile-class
@@ -530,12 +530,17 @@ setClass(
 #'   \item{"rb"}{The connection is operend in read-only binary mode.}
 #' }
 #' An \code{operendWorkFile} may not be opened for writing or appending.
+#' @param method
+#' A character string specifying the URL connection method;
+#' defaults to the 'url.method' option
 #' @return
 #' An \code{operendWorkFile} object, containing
 #' a read-only \code{\link[base]{url}} connection to the specified WorkFile,
 #' opened for reading in text or binary mode if specified.
 
-operendWorkFile <- function (id, open = c("", "r", "rt", "rb"))
+operendWorkFile <- function (
+  id, open = c("", "r", "rt", "rb"), method = getOption("url.method")
+)
 {
   # Check arguments for errors
   if (missing(id)) {
@@ -557,6 +562,12 @@ operendWorkFile <- function (id, open = c("", "r", "rt", "rb"))
     open <- match.arg(open)
   }
 
+  if (!missing(method)) {
+    if (!(is.character(method) && length(method) == 1)) {
+      stop("Argument 'method' must be a character string")
+    }
+  }
+
   # Check that a valid token is stored in the opeRend options
   if (!validObject(getOption("opeRend")$token)) {
     stop("A valid token must be stored in options('opeRend')")
@@ -566,8 +577,11 @@ operendWorkFile <- function (id, open = c("", "r", "rt", "rb"))
   # using token to authenticate via header
   con <- tryCatch(
     url(
-      description = operendApiUrl("WorkFileContents", id),
+      description = paste(
+        getOption("opeRend")$api_base_url, "WorkFileContents", id, sep = "/"
+      ),
       open = open,
+      method = method,
       headers = c(
         "Accept" = "application/octet-stream",
         "Authorization" = paste("Bearer", getOption("opeRend")$token@secret)
@@ -596,7 +610,7 @@ operendWorkFile <- function (id, open = c("", "r", "rt", "rb"))
 
 setClass(
   "operendJobRunParameters",
-  prototype = new("SimpleList", elementType="character"),
+  prototype = new("SimpleList", elementType = "character"),
   validity = validateOperendSimpleList,
   contains = "SimpleList"
 )
@@ -607,7 +621,7 @@ setClass(
 
 operendJobRunParameters <- function (...)
 {
-  new("operendJobRunParameters", listData=list(...))
+  new("operendJobRunParameters", listData = list(...))
 }
 
 #' @export operendJobRunStatusHistoryPoint
@@ -640,7 +654,7 @@ operendJobRunStatusHistoryPoint <- setClass(
 setClass(
   "operendJobRunStatusHistory",
   prototype = new(
-    "SimpleList", elementType="operendJobRunStatusHistoryPoint"
+    "SimpleList", elementType = "operendJobRunStatusHistoryPoint"
   ),
   validity = validateOperendSimpleList,
   contains = "SimpleList"
@@ -652,7 +666,7 @@ setClass(
 
 operendJobRunStatusHistory <- function (...)
 {
-  new("operendJobRunStatusHistory", listData=list(...))
+  new("operendJobRunStatusHistory", listData = list(...))
 }
 
 #' @export operendJobRunMessage
@@ -683,7 +697,7 @@ operendJobRunMessage <- setClass(
 # Container for a list of operendJobRunMessage objects
 setClass(
   "operendJobRunMessageLog",
-  prototype = new("SimpleList", elementType="operendJobRunMessage"),
+  prototype = new("SimpleList", elementType = "operendJobRunMessage"),
   validity = validateOperendSimpleList,
   contains = "SimpleList"
 )
@@ -694,7 +708,7 @@ setClass(
 
 operendJobRunMessageLog <- function (...)
 {
-  new("operendJobRunMessageLog", listData=list(...))
+  new("operendJobRunMessageLog", listData = list(...))
 }
 
 #' @export operendJobRunSubtask
@@ -741,7 +755,7 @@ operendJobRunSubtask <- setClass(
 # Container for a list of operendJobRunSubtask objects
 setClass(
   "operendJobRunSubtaskList",
-  prototype = new("SimpleList", elementType="operendJobRunSubtask"),
+  prototype = new("SimpleList", elementType = "operendJobRunSubtask"),
   validity = validateOperendSimpleList,
   contains = "SimpleList"
 )
@@ -752,7 +766,7 @@ setClass(
 
 operendJobRunSubtaskList <- function (...)
 {
-  new("operendJobRunSubtaskList", listData=list(...))
+  new("operendJobRunSubtaskList", listData = list(...))
 }
 
 #' @export operendJobRun
@@ -834,7 +848,7 @@ operendJobRun <- setClass(
 # Container for a list of operendJobRun objects
 setClass(
   "operendJobRunList",
-  prototype = new("SimpleList", elementType="operendJobRun"),
+  prototype = new("SimpleList", elementType = "operendJobRun"),
   validity = validateOperendSimpleList,
   contains = "SimpleList"
 )
@@ -845,7 +859,7 @@ setClass(
 
 operendJobRunList <- function (...)
 {
-  new("operendJobRunList", listData=list(...))
+  new("operendJobRunList", listData = list(...))
 }
 
 # EntityClass-related classes ##################################################
@@ -904,8 +918,8 @@ operendVariable <- setClass(
     errors <- c()
     # The 'type' slot must contain a single letter corresponding to a known type
     types <- c(
-      boolean="B", code="C", date="D", entity="E", float="F", integer="I",
-      jobRun="J", text="T", workFile="W"
+      boolean = "B", code = "C", date = "D", entity = "E", float = "F",
+      integer = "I", jobRun = "J", text = "T", workFile = "W"
     )
     if (length(object@type) != 1) {
       errors <- paste("The vector in slot 'type' must be of length 1")
@@ -913,7 +927,7 @@ operendVariable <- setClass(
       if (!is.element(object@type, types)) {
         errors <- paste(
           "The value in slot 'type' must be one of the following:",
-          paste(sQuote(types), collapse=",")
+          paste(sQuote(types), collapse = ",")
         )
       } else {
         # Check slot 'codes'
@@ -970,7 +984,7 @@ operendVariable <- setClass(
 
 setClass(
   "operendVariables",
-  prototype = new("SimpleList", elementType="operendVariable"),
+  prototype = new("SimpleList", elementType = "operendVariable"),
   contains = "SimpleList"
 )
 
@@ -980,7 +994,7 @@ setClass(
 
 operendVariables <- function (...)
 {
-  new("operendVariables", listData=list(...))
+  new("operendVariables", listData = list(...))
 }
 
 #' @export operendEntityClass
@@ -1054,7 +1068,7 @@ operendEntityClass <- setClass(
 # Container for a list of operendEntityClass objects
 setClass(
   "operendEntityClassList",
-  prototype = new("SimpleList", elementType="operendEntityClass"),
+  prototype = new("SimpleList", elementType = "operendEntityClass"),
   validity = validateOperendSimpleList,
   contains = "SimpleList"
 )
@@ -1065,7 +1079,7 @@ setClass(
 
 operendEntityClassList <- function (...)
 {
-  new("operendEntityClassList", listData=list(...))
+  new("operendEntityClassList", listData = list(...))
 }
 
 # Entity-related classes #######################################################
@@ -1150,7 +1164,7 @@ operendEntity <- setClass(
 # Container for a list of operendEntity objects
 setClass(
   "operendEntityList",
-  prototype = new("SimpleList", elementType="operendEntity"),
+  prototype = new("SimpleList", elementType = "operendEntity"),
   validity = validateOperendSimpleList,
   contains = "SimpleList"
 )
@@ -1161,5 +1175,5 @@ setClass(
 
 operendEntityList <- function (...)
 {
-  new("operendEntityList", listData=list(...))
+  new("operendEntityList", listData = list(...))
 }

@@ -17,10 +17,14 @@
 #' An optional \code{\linkS4class{operendPermissions}} object
 #' specifying the permissions to be used when creating or updating the record
 #' @param verbosity
-#' A value coercible to a nonnegative integer, specifying the verbosity level.
-#' A value of FALSE, TRUE, 0 or 1 does not produce any messages.
-#' A value of 2 instructs the curl calls to produce verbose output.
-#' A value greater than 2 produces additional output.
+#' An integer-coercible value specifying the verbosity level:
+#' \describe{
+#'   \item{\code{0}}{Do not print messages}
+#'   \item{\code{1}}{Print only high-level messages}
+#'   \item{\code{2}}{Show headers}
+#'   \item{\code{3}}{Show headers and bodies}
+#'   \item{\code{4+}}{Show headers, bodies, and curl status messages}
+#' }
 #' Defaults to \code{getOption("opeRend")$verbosity}.
 #' @details
 #' If \code{updateEntity} is called without argument \code{variables},
@@ -46,7 +50,7 @@
 #' @export
 addEntity <- function (
   class, id, variables, permissions,
-  verbosity=getOption("opeRend")$verbosity
+  verbosity = getOption("opeRend")$verbosity
 )
 {
   # Check arguments for errors
@@ -65,6 +69,7 @@ addEntity <- function (
   if (missing(variables) || !(is.list(variables) && length(variables))) {
     stop("Argument 'variables' must be a list of nonzero length")
   } else if (
+    is.null(names(variables)) ||
     any(names(variables) %in% c("", NA_character_)) ||
     any(duplicated(names(variables)))
   ) {
@@ -99,32 +104,37 @@ addEntity <- function (
   if (length(i)) {
     warning(
       "Removing following elements from argument 'variables': ",
-      paste(sQuote(names(variables)[i]), collapse=", ")
+      paste(sQuote(names(variables)[i]), collapse = ", ")
     )
     variables <- variables[-i]
-  }
-
-  # Ensure that Entity array variables of length 1 are converted to JSON
-  # arrays by coercing to a list first
-  arrayVariableIds <- names(
-    which(sapply(entityClassDef@variables, slot, "is_array"))
-  )
-  for (variableId in arrayVariableIds) {
-    if (length(variables[[variableId]]) == 1) {
-      variables[[variableId]] <- list(unname(variables[[variableId]]))
+    if (length(variables) == 0) {
+      stop("No valid variables were provided")
     }
   }
+  # Get character vector of names of array-type variables
+  arrayVariables <- names(
+    which(
+      sapply(entityClassDef@variables[names(variables)], slot, "is_array")
+    )
+  )
 
   # Create list of fields including any parameters intrinsic to Entities
-  fields <- c("_class"=class, variables)
+  fields <- c("_class" = class, variables)
   if (!missing(id)) fields[["_entity_id"]] <- id
   if (!missing(permissions)) fields[["_permissions"]] <- permissions
+  # Preprocess the fields list
+  # Note: this must be done before applying I() below,
+  #       which does not work with operendDate or operendPermissions objects
+  fields <- operendPreprocess(fields)
+  # Use I() to prevent jsonlite::toJSON() from automatically unboxing
+  # Entity array-type variables of length 1
+  fields[arrayVariables] <- lapply(fields[arrayVariables], I)
 
   # Submit a POST request and stop if an error is returned
   result <- operendPostprocess(
     operendApiCall(
-      url = operendApiUrl("Entities"), method = "POST",
-      content = operendPreprocess(fields), verbosity = verbosity
+      path = "Entities", method = "POST",
+      content = fields, verbosity = verbosity
     )
   )
   if (verbosity > 0) {
@@ -136,7 +146,7 @@ addEntity <- function (
 #' @export
 #' @rdname Entities
 deleteEntity <- function (
-  id, verbosity=getOption("opeRend")$verbosity
+  id, verbosity = getOption("opeRend")$verbosity
 )
 {
   # Check arguments for errors
@@ -155,10 +165,9 @@ deleteEntity <- function (
   }
 
   # Submit DELETE request; if successful, the response should be:
-  #   list(success=TRUE)
+  #   list(success = TRUE)
   response <- operendApiCall(
-    url=operendApiUrl("Entities", id), method="DELETE",
-    verbosity=verbosity
+    path = c("Entities", id), method = "DELETE", verbosity = verbosity
   )
 
   # If the API call did not throw an error, print a message if requested,
@@ -171,7 +180,7 @@ deleteEntity <- function (
 
 #' @export
 #' @rdname Entities
-getEntity <- function (id, verbosity=getOption("opeRend")$verbosity)
+getEntity <- function (id, verbosity = getOption("opeRend")$verbosity)
 {
   # Check arguments for errors
   if (missing(id)) {
@@ -191,15 +200,14 @@ getEntity <- function (id, verbosity=getOption("opeRend")$verbosity)
   # Submit GET request and return response as operendEntity object
   operendPostprocess(
     operendApiCall(
-      url=operendApiUrl("Entities", id), method="GET",
-      verbosity=verbosity
+      path = c("Entities", id), method = "GET", verbosity = verbosity
     )
   )
 }
 
 #' @export
 #' @rdname Entities
-listEntities <- function (class, variables=list())
+listEntities <- function (class, variables = list())
 {
   # Check arguments for errors
   if (missing(class)) {
@@ -212,6 +220,7 @@ listEntities <- function (class, variables=list())
     if (!is.list(variables)) {
       stop("Argument 'variables' must be a list")
     } else if (
+      is.null(names(variables)) ||
       any(names(variables) %in% c("", NA_character_)) ||
       any(duplicated(names(variables)))
     ) {
@@ -236,13 +245,13 @@ listEntities <- function (class, variables=list())
   if (length(i)) {
     warning(
       "Removing following elements from argument 'variables': ",
-      paste(sQuote(names(variables)[i]), collapse=", ")
+      paste(sQuote(names(variables)[i]), collapse = ", ")
     )
     variables <- variables[-i]
   }
 
   # Create list of fields including any parameters intrinsic to Entities
-  fields <- c("_class"=class, variables)
+  fields <- c("_class" = class, variables)
 
   # When this function is passed in any variables of type "E"
   # (i.e., to list only those Entities that refer to a given Entity),
@@ -259,8 +268,8 @@ listEntities <- function (class, variables=list())
   names(fields)[i] <- paste0(names(fields)[i], ".id")
 
   response <- operendApiCall(
-    url=operendApiUrl("EntityQuery", "All", query=operendPreprocess(fields)),
-    method="GET"
+    path = c("EntityQuery", "All"), query = operendPreprocess(fields),
+    method = "GET"
   )
 
   # This workaround is needed until a bug is fixed in the back end: when an
@@ -276,7 +285,7 @@ listEntities <- function (class, variables=list())
 #' @export
 #' @rdname Entities
 updateEntity <- function (
-  id, variables, permissions, verbosity=getOption("opeRend")$verbosity
+  id, variables, permissions, verbosity = getOption("opeRend")$verbosity
 )
 {
   # Check arguments for errors
@@ -288,29 +297,10 @@ updateEntity <- function (
     }
   }
 
-  if (!missing(variables)) {
-    if (!(is.list(variables) && length(variables))) {
-      stop("Argument 'variables' must be a list of nonzero length")
-    } else if (
-      any(names(variables) %in% c("", NA_character_)) ||
-      any(duplicated(names(variables)))
-    ) {
-      stop(
-        "All elements of argument 'variables' must have valid and unique names"
-      )
-    }
-  }
-
   if (!missing(permissions)) {
     if (!is(permissions, "operendPermissions")) {
       stop("Argument 'permissions' must be an operendPermissions object")
     }
-  }
-
-  if (missing(variables) && missing(permissions)) {
-    stop(
-      "If argument 'variables' is missing, argument 'permissions' is required"
-    )
   }
 
   verbosity <- suppressWarnings(as.integer(verbosity))
@@ -320,9 +310,26 @@ updateEntity <- function (
     )
   }
 
+  # Initialize list of fields from id and any permissions
+  fields <- list("_entity_id" = id)
+  if (!missing(permissions)) fields[["_permissions"]] <- permissions
+
   if (!missing(variables)) {
+    # Check validity of 'variables' argument
+    if (!(is.list(variables) && length(variables))) {
+      stop("Argument 'variables' must be a list of nonzero length")
+    } else if (
+      is.null(names(variables)) ||
+      any(names(variables) %in% c("", NA_character_)) ||
+      any(duplicated(names(variables)))
+    ) {
+      stop(
+        "All elements of argument 'variables' must have valid and unique names"
+      )
+    }
+
     # Retrieve Entity
-    object <- getEntity(id, verbosity=verbosity)
+    object <- getEntity(id, verbosity = verbosity)
     class <- slot(object, "_class")
     # If the current Entity class definition is not the cache,
     # retrieve it from the Operend Core server and place it in the cache
@@ -337,34 +344,45 @@ updateEntity <- function (
     if (length(i)) {
       warning(
         "Removing following elements from argument 'variables': ",
-        paste(sQuote(names(variables)[i]), collapse=", ")
+        paste(sQuote(names(variables)[i]), collapse = ", ")
       )
       variables <- variables[-i]
-    }
-
-    # Ensure that Entity array variables of length 1 are converted to JSON
-    # arrays by coercing to a list first
-    arrayVariableIds <- names(
-      which(sapply(entityClassDef@variables, slot, "is_array"))
-    )
-    for (variableId in arrayVariableIds) {
-      if (length(variables[[variableId]]) == 1) {
-        variables[[variableId]] <- list(unname(variables[[variableId]]))
+      if (length(variables)) {
+        # Add variables to list of fields
+        fields <- c(fields, variables)
+        # Get character vector of names of array-type variables
+        arrayVariables <- names(
+          which(
+            sapply(entityClassDef@variables[names(variables)], slot, "is_array")
+          )
+        )
       }
     }
   }
 
-  # Create list of fields from variables and/or permissions
-  fields <- list("_entity_id" = id)
-  if (!missing(variables)) fields <- c(fields, variables)
-  if (!missing(permissions)) fields[["_permissions"]] <- permissions
+  # Either the variables or permissions, or both, must be provided
+  if ((missing(variables) || length(variables) == 0) && missing(permissions)) {
+    stop(
+      "If argument 'variables' does not contain valid variables, ",
+      "argument 'permissions' is required"
+    )
+  }
+
+  # Preprocess the fields list
+  # Note: this must be done before applying I() below,
+  #       which does not work with operendDate or operendPermissions objects
+  fields <- operendPreprocess(fields)
+  if (exists("arrayVariables")) {
+    # Use I() to prevent jsonlite::toJSON() from automatically unboxing
+    # Entity array-type variables of length 1
+    fields[arrayVariables] <- lapply(fields[arrayVariables], I)
+  }
 
   # Submit a PUT request and stop if an error is returned
   result <- operendPostprocess(
     operendApiCall(
-      url = operendApiUrl("Entities", id), method = "PUT",
-      content = operendPreprocess(fields),
-      verbosity = verbosity
+      path = c("Entities", id), method = "PUT",
+      content = fields, verbosity = verbosity
     )
   )
 

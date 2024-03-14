@@ -18,14 +18,14 @@ test_that(
       for (variable in list(0L, character(), letters)) {
         testInput <- testToken
         testInput[[variableId]] <- variable
-        expect_error(do.call(operendToken, args=testInput))
+        expect_error(do.call(operendToken, args = testInput))
       }
     }
     # The 'authorizations' slot should contain a non-empty character vector
     for (variable in list(0L, character())) {
       testInput <- testToken
       testInput$authorizations <- variable
-      expect_error(do.call(operendToken, args=testInput))
+      expect_error(do.call(operendToken, args = testInput))
     }
     # Test the check for token secret formatting
     testSecrets <- list(
@@ -36,10 +36,10 @@ test_that(
     for (variable in testSecrets) {
       testInput <- testToken
       testInput$secret <- variable
-      expect_error(do.call(operendToken, args=testInput))
+      expect_error(do.call(operendToken, args = testInput))
     }
     testInput <- testToken
-    expect_s4_class(do.call(operendToken, args=testInput), "operendToken")
+    expect_s4_class(do.call(operendToken, args = testInput), "operendToken")
   }
 )
 
@@ -56,32 +56,32 @@ test_that(
       )
     )
     # Argument 'configFile' must be a character string
-    expect_error(getOperendConfig(configFile=0L))
-    expect_error(getOperendConfig(configFile=character()))
-    expect_error(getOperendConfig(configFile=letters))
+    expect_error(getOperendConfig(configFile = 0L))
+    expect_error(getOperendConfig(configFile = character()))
+    expect_error(getOperendConfig(configFile = letters))
     # Argument 'config' must be a character string
-    expect_error(getOperendConfig(config=0L))
-    expect_error(getOperendConfig(config=character()))
-    expect_error(getOperendConfig(config=letters))
+    expect_error(getOperendConfig(config = 0L))
+    expect_error(getOperendConfig(config = character()))
+    expect_error(getOperendConfig(config = letters))
     # If argument 'config' is specified when argument 'configFile' is empty,
     # a warning is thrown
-    expect_warning(getOperendConfig(configFile="", config="testConfig"))
+    expect_warning(getOperendConfig(configFile = "", config = "testConfig"))
     # The file specified in argument 'config' must exist
     missingConfigFile <- tempfile()
     unlink(missingConfigFile)
-    expect_error(getOperendConfig(configFile=missingConfigFile))
+    expect_error(getOperendConfig(configFile = missingConfigFile))
     # The file in argument 'configFile' must be INI-formatted
     write("this is not a valid INI file", testConfigFile)
-    expect_error(getOperendConfig(configFile=testConfigFile))
+    expect_error(getOperendConfig(configFile = testConfigFile))
     # The section specified by argument 'config' must be present in the file
-    configr::write.config(configDat, testConfigFile, write.type="ini")
-    expect_error(getOperendConfig(testConfigFile, config="missingConfig"))
+    configr::write.config(configDat, testConfigFile, write.type = "ini")
+    expect_error(getOperendConfig(testConfigFile, config = "missingConfig"))
     # The config file must contain a token
-    expect_error(getOperendConfig(testConfigFile, config="testConfig"))
+    expect_error(getOperendConfig(testConfigFile, config = "testConfig"))
     # The config file must contain a valid token
     configDat$testConfig$token <- "invalidToken"
-    configr::write.config(configDat, testConfigFile, write.type="ini")
-    expect_error(getOperendConfig(testConfigFile, config="testConfig"))
+    configr::write.config(configDat, testConfigFile, write.type = "ini")
+    expect_error(getOperendConfig(testConfigFile, config = "testConfig"))
     configDat$testConfig$token <- list(
       username       = "testUser",
       name           = "testToken",
@@ -89,23 +89,23 @@ test_that(
       creationDate   = "Sat Oct 26 01:21:00 UTC 1985",
       secret = "testUser:testToken:thisIsAnAlphanumericSecretof40Characters"
     )
-    configDat$testConfig$token <- rjson::toJSON(configDat$testConfig$token)
+    configDat$testConfig$token <- jsonlite::toJSON(configDat$testConfig$token)
     # If a base API URL is provided, it must be valid
     configDat$testConfig$api_base_url <- "invalidUrl"
-    configr::write.config(configDat, testConfigFile, write.type="ini")
-    expect_error(getOperendConfig(testConfigFile, config="testConfig"))
+    configr::write.config(configDat, testConfigFile, write.type = "ini")
+    expect_error(getOperendConfig(testConfigFile, config = "testConfig"))
     configDat$testConfig$api_base_url <- NULL
     # If a time zone is provided, it must be valid
     configDat$testConfig$timezone <- "invalidTimezone"
-    configr::write.config(configDat, testConfigFile, write.type="ini")
-    expect_error(getOperendConfig(testConfigFile, config="testConfig"))
+    configr::write.config(configDat, testConfigFile, write.type = "ini")
+    expect_error(getOperendConfig(testConfigFile, config = "testConfig"))
     configDat$testConfig$timezone <- NULL
     # If a verbosity value is provided,
     # it must be coercible to a single nonnegative integer
     for (verbosity in list(-1, 0:1, NA_integer_, "non-integer")) {
       configDat$testConfig$verbosity <- verbosity
-      configr::write.config(configDat, testConfigFile, write.type="ini")
-      expect_error(getOperendConfig(testConfigFile, config="testConfig"))
+      configr::write.config(configDat, testConfigFile, write.type = "ini")
+      expect_error(getOperendConfig(testConfigFile, config = "testConfig"))
     }
   }
 )
@@ -124,19 +124,20 @@ test_that(
       username       = "testUser",
       name           = "testToken",
       authorizations = c("read", "write"),
-      creationDate   = "Sat Oct 26 01:21:00 UTC 1985",
+      creationDate   = "Sat Oct 26 01:21:00 PST 1985",
       secret = "testUser:testToken:thisIsAnAlphanumericSecretof40Characters"
     )
     expectedOutput <- list(
       api_base_url = "https://localhost/api/v2",
+      max_show_entity_array_elements = 10,
       timezone = "UTC",
       verbosity = 1L,
       storage_location = "test_storage_location",
-      token = do.call(operendToken, args=configDat$testConfig$token)
+      token = do.call(operendToken, args = configDat$testConfig$token)
     )
-    configDat$testConfig$token <- rjson::toJSON(configDat$testConfig$token)
-    configr::write.config(configDat, testConfigFile, write.type="ini")
-    result <- getOperendConfig(testConfigFile, config="testConfig")
+    configDat$testConfig$token <- jsonlite::toJSON(configDat$testConfig$token)
+    configr::write.config(configDat, testConfigFile, write.type = "ini")
+    result <- getOperendConfig(testConfigFile, config = "testConfig")
     expect_identical(result, expectedOutput)
   }
 )

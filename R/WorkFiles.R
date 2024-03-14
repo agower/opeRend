@@ -1,3 +1,4 @@
+#' @import httr2
 #' @importFrom tools file_ext
 
 #' @rdname WorkFiles
@@ -30,7 +31,7 @@
 #' A character string specifying the original name of the file.  If \code{file}
 #' is a character string, this defaults to the base name of the file.
 #' @param originalModifiedTime
-#' An integer-coercible value, specifying the original modification time of the
+#' An numeric-coercible value, specifying the original modification time of the
 #' file (in seconds since the Unix epoch).  If \code{file} is a character
 #' string, this defaults to the 'mtime' of the file.
 #' @param id
@@ -43,10 +44,14 @@
 #' An optional \code{\linkS4class{operendPermissions}} object
 #' specifying the permissions to be used when creating or updating the record
 #' @param verbosity
-#' A value coercible to a nonnegative integer, specifying the verbosity level.
-#' A value of FALSE, TRUE, 0 or 1 does not produce any messages.
-#' A value of 2 instructs the curl calls to produce verbose output.
-#' A value greater than 2 produces additional output.
+#' An integer-coercible value specifying the verbosity level:
+#' \describe{
+#'   \item{\code{0}}{Do not print messages}
+#'   \item{\code{1}}{Print only high-level messages}
+#'   \item{\code{2}}{Show headers}
+#'   \item{\code{3}}{Show headers and bodies}
+#'   \item{\code{4+}}{Show headers, bodies, and curl status messages}
+#' }
 #' Defaults to \code{getOption("opeRend")$verbosity}.
 #' @return
 #' \describe{
@@ -80,7 +85,7 @@ addWorkFile <- function (
     # Use normalizePath() to expand path to file,
     # converting any warning to an error
     file <- tryCatch(
-      normalizePath(file, mustWork=NA),
+      normalizePath(file, mustWork = NA),
       warning = function (condition) {
         stop(
           "Invalid filename ", sQuote(file), ":\n",
@@ -121,10 +126,10 @@ addWorkFile <- function (
   }
 
   if (!missing(originalModifiedTime)) {
-    originalModifiedTime <- suppressWarnings(as.integer(originalModifiedTime))
+    originalModifiedTime <- suppressWarnings(as.numeric(originalModifiedTime))
     if (length(originalModifiedTime) != 1 || is.na(originalModifiedTime)) {
       stop(
-        "Argument 'originalModifiedTime' must be coercible to an integer value"
+        "Argument 'originalModifiedTime' must be coercible to a numeric value"
       )
     }
   }
@@ -150,10 +155,10 @@ addWorkFile <- function (
   if (is.character(file)) {
     if (missing(fileType)) fileType <- tools::file_ext(file)
     if (missing(originalName)) originalName <- basename(file)
-    if (missing(originalModifiedTime)) originalModifiedTime <- file.mtime(file)
+    if (missing(originalModifiedTime)) {
+      originalModifiedTime <- as.numeric(file.mtime(file))
+    }
     n <- file.size(file)
-    buffer <- file(description=file, open="rb")
-    on.exit(close(buffer))
   } else {
     input <- summary(file)
     if (isOpen(file)) {
@@ -164,22 +169,23 @@ addWorkFile <- function (
       open(file, "rb")
       on.exit(close(file))
     }
+    # Use 'description' field of connection for 'originalName' field of WorkFile
     if (missing(originalName)) originalName <- basename(input$description)
     # Open an anonymous file for writing
-    buffer <- file(open="w+b")
-    on.exit(close(buffer), add=TRUE)
+    buffer <- file(open = "w+b")
+    on.exit(close(buffer), add = TRUE)
     # Only up to 10000 bytes will be retrieved at once, because:
     # - the length of the data at the connection is unknown
     # - storage is reserved for 'n' elements when readBin() is called
     # - if 'n' is large, this means that a large vector will be reserved
     #   for each call, which is a waste of resources
-    # - when readBin() is called with what="character", the input is broken
+    # - when readBin() is called with what = "character", the input is broken
     #   into pieces of length 10000, which seems like a good precedent
     n <- 0
     packetSize <- 10000
     tryCatch(
       repeat {
-        packet <- readBin(con=file, what="raw", n=packetSize)
+        packet <- readBin(con = file, what = "raw", n = packetSize)
         N <- length(packet)
         if (N == 0) {
           break
@@ -191,11 +197,6 @@ addWorkFile <- function (
       error = readErrorHandler
     )
   }
-  # Read the content from the buffer into a raw vector
-  content <- tryCatch(
-    readBin(con=buffer, what="raw", n=n),
-    error = readErrorHandler
-  )
 
   # Assemble a list of optional parameters
   query <- list()
@@ -208,7 +209,6 @@ addWorkFile <- function (
   if (!missing(token)) query$token <- token
 
   if (verbosity > 0) {
-    n <- length(content)
     if (is.character(file)) {
       cat("Uploading", n, "bytes from file", sQuote(file))
     } else {
@@ -228,10 +228,11 @@ addWorkFile <- function (
   # Submit a POST request and convert response to a WorkFileProperties object
   result <- operendPostprocess(
     operendApiCall(
-      url = operendApiUrl("WorkFiles", query=query), method = "POST",
+      path = "WorkFiles", query = query, method = "POST",
       accept = "application/json",
-      content = content,
+      content = if (is.character(file)) file else buffer,
       contentType = "application/octet-stream",
+      contentIsFilePath = TRUE,
       verbosity = verbosity
     )
   )
@@ -240,7 +241,7 @@ addWorkFile <- function (
     # (This is a workaround because setting the permissions during the add
     # operation does not work)
     result <- updateWorkFileProperties(
-      objectId(result), permissions=permissions, verbosity=0
+      objectId(result), permissions = permissions, verbosity = 0
     )
   }
   if (verbosity > 0) {
@@ -252,7 +253,7 @@ addWorkFile <- function (
 #' @export
 #' @rdname WorkFiles
 getWorkFile <- function (
-  id, filename, verbosity=getOption("opeRend")$verbosity
+  id, filename, verbosity = getOption("opeRend")$verbosity
 )
 {
   # Check arguments for errors
@@ -281,7 +282,7 @@ getWorkFile <- function (
   }
   workFileContents <- tryCatch(
     operendApiCall(
-      url = operendApiUrl("WorkFileContents", id), method = "GET",
+      path = c("WorkFileContents", id), method = "GET",
       accept = "application/octet-stream", verbosity = verbosity
     ),
     error = function (condition) {
@@ -328,12 +329,11 @@ purgeWorkFile <- function (
   }
 
   # Submit a DELETE request and stop if an error is returned;
-  # if successful, the response should be:
-  #   "Workfile purged."
-  # with attribute
-  #  "Content-Type"="application/json"
+  # if successful, the response should be the plaintext:
+  # "Workfile purged."
   response <- operendApiCall(
-    url = operendApiUrl("WorkFileProperties", id), method = "DELETE",
+    path = c("WorkFileProperties", id), method = "DELETE",
+    accept = "application/octet-stream",
     verbosity = verbosity
   )
 

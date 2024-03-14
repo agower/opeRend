@@ -1,4 +1,4 @@
-#' @import methods RCurl S4Vectors
+#' @import methods S4Vectors
 #' @importFrom stats setNames
 
 # coerce #######################################################################
@@ -15,37 +15,39 @@
 
 # Note: as.POSIXct() cannot accept "%Z" as input in the format string
 setAs(
-  from="character", to="operendDate",
-  def=function (from) {
+  from = "character", to = "operendDate",
+  def = function (from) {
     tz <- getOption("opeRend")$timezone
-    operendDate(as.POSIXct(from, tz=tz, format=paste("%a %b %d %T", tz, "%Y")))
+    operendDate(
+      as.POSIXct(from, tz = tz, format = paste("%a %b %d %T", tz, "%Y"))
+    )
   }
 )
 setAs(
-  from="Date", to="operendDate",
-  def=function (from) operendDate(as.POSIXct(from))
+  from = "Date", to = "operendDate",
+  def = function (from) operendDate(as.POSIXct(from))
 )
 setAs(
-  from="numeric", to="operendDate",
-  def=function (from) {
+  from = "numeric", to = "operendDate",
+  def = function (from) {
     tz <- getOption("opeRend")$timezone
-    operendDate(as.POSIXct(from, origin="1970-01-01", tz=tz))
+    operendDate(as.POSIXct(from, origin = "1970-01-01", tz = tz))
   }
 )
 setAs(
-  from="POSIXct", to="operendDate",
-  def=function (from) operendDate(from)
+  from = "POSIXct", to = "operendDate",
+  def = function (from) operendDate(from)
 )
 
 setAs(
-  from="operendDate", to="character",
-  def=function (from) {
-    format(from, tz=getOption("opeRend")$timezone, "%a %b %d %T %Z %Y")
+  from = "operendDate", to = "character",
+  def = function (from) {
+    format(from, tz = getOption("opeRend")$timezone, "%a %b %d %T %Z %Y")
   }
 )
 setAs(
-  from="operendDate", to="Date",
-  def=function (from) as.Date(format(from, "%F"))
+  from = "operendDate", to = "Date",
+  def = function (from) as.Date(format(from, "%F"))
 )
 
 ### operendPermissions #########################################################
@@ -65,74 +67,12 @@ setAs(
       result <- ""
     } else {
       # Otherwise, construct a string from the permissions
-      result <- lapply(result, paste, collapse=",")
+      result <- lapply(result, paste, collapse = ",")
       result <- mapply(paste0, names(result), ": ", result)
-      result <- paste(result, collapse="; ")
+      result <- paste(result, collapse = "; ")
     }
     result
   }
-)
-
-### data.frame #################################################################
-
-#' @rdname operendSimpleListToDataFrame
-#' @name SimpleList to data frame
-#' @title Coerce a SimpleList to a data frame
-#' @description
-#' This function coerces a SimpleList object to a data frame.
-#' @param from
-#' A \code{\linkS4class{SimpleList}}
-#' @return
-#' A data frame with one row for each element in \code{from}
-#' and one column for each slot in \code{from}.
-#' @author Adam C. Gower \email{agower@@bu.edu}
-
-operendSimpleListToDataFrame <- function (from)
-{
-  if (missing(from)) {
-    stop("Argument 'from' is required")
-  } else if (!is(from, "SimpleList")) {
-    stop("Argument 'from' must contain a SimpleList")
-  }
-  # Initialize a data frame
-  result <- data.frame(
-    row.names = if (is.null(names(from))) seq_along(from) else names(from)
-  )
-  slotClasses <- getSlots(from@elementType)
-  atomicTypes <- c("character", "integer", "logical", "numeric")
-  if (length(from)) {
-    # Copy each slot into a new column of the data frame
-    for (slotName in names(slotClasses)) {
-      column <- lapply(from, slot, slotName)
-      slotClass <- slotClasses[slotName]
-      if (slotClass %in% c("operendDate", "operendPermissions")) {
-        column <- sapply(column, as, "character")
-      } else if (extends(slotClass, "SimpleList")) {
-        # This will coerce NULLs to empty character vectors
-        column <- lapply(lapply(column, lapply, objectId), as, "character")
-      } else if (slotClass %in% atomicTypes) {
-        column <- unlist(column)
-      }
-      result[[slotName]] <- column
-    }
-  } else {
-    # Create a list of empty character vectors
-    result[names(slotClasses)] <- list(character(0))
-  }
-  result
-}
-
-setAs(
-  from = "operendGroupList", to = "data.frame",
-  def = operendSimpleListToDataFrame
-)
-setAs(
-  from = "operendUserList", to = "data.frame",
-  def = operendSimpleListToDataFrame
-)
-setAs(
-  from = "operendWorkFilePropertiesList", to = "data.frame",
-  def = operendSimpleListToDataFrame
 )
 
 # objectId ####################################################################
@@ -308,7 +248,7 @@ setMethod(
 #' @param what
 #' (For \code{readRDS})
 #' Either an object whose mode will give the mode of the vector to be read,
-#' or a character vector of length one describing the mode: one of "numeric",
+#' or a character vector of length 1 describing the mode: one of "numeric",
 #' "double", "integer", "int", "logical", "complex", "character", "raw"
 #' @param n
 #' (For \code{readRDS})
@@ -374,7 +314,7 @@ setMethod(
 #' @aliases close,operendWorkFile-method
 setMethod(
   "close",
-  signature(con="operendWorkFile"),
+  signature(con = "operendWorkFile"),
   function (con, ...) {
     close(as(con, "connection"), ...)
   }
@@ -391,7 +331,7 @@ setGeneric("gzcon", function(con, ...) base::gzcon(con, ...))
 #' @aliases gzcon,operendWorkFile-method
 setMethod(
   "gzcon",
-  signature(con="operendWorkFile"),
+  signature(con = "operendWorkFile"),
   function(con, ...) {
     gzcon(as(con, "connection"), ...)
   }
@@ -404,7 +344,7 @@ setMethod(
 #' @aliases open,operendWorkFile-method
 setMethod(
   "open",
-  signature(con="operendWorkFile"),
+  signature(con = "operendWorkFile"),
   function (con, ...) {
     open(as(con, "connection"), ...)
   }
@@ -421,7 +361,7 @@ setGeneric("readBin", function(con, ...) base::readBin(con, ...))
 #' @aliases readBin,operendWorkFile-method
 setMethod(
   "readBin",
-  signature(con="operendWorkFile"),
+  signature(con = "operendWorkFile"),
   function (con, what, n, ...) {
     if (isOpen(con)) {
       if (summary(con)$mode != "rb") {
@@ -442,19 +382,19 @@ setMethod(
     ) {
       what <- typeof(what)
     }
-    result <- vector(mode=what, length=n)
+    result <- vector(mode = what, length = n)
 
     # Only up to 10000 elements will be retrieved at once, because:
     # - for some reason, only one packet at a time is retrieved from Operend
     # - storage is reserved for 'n' elements when readBin() is called
     # - if 'n' is large, this means that a large vector will be reserved
     #   for each call, which is a waste of resources
-    # - when readBin() is called with what="character",
+    # - when readBin() is called with what = "character",
     #   the input is broken into pieces of length 10000
     packetSize <- 10000
     i <- 0
     repeat {
-      packet <- readBin(con=asS3(con), what=what, n=packetSize, ...)
+      packet <- readBin(con = asS3(con), what = what, n = packetSize, ...)
       N <- length(packet)
       if (N == 0) {
         break
@@ -471,14 +411,14 @@ setMethod(
 
 #' @export
 #' @rdname operendWorkFile-methods
-setGeneric("readLines", def=function(con, ...) base::readLines(con, ...))
+setGeneric("readLines", def = function(con, ...) base::readLines(con, ...))
 
 #' @export
 #' @rdname operendWorkFile-methods
 #' @aliases readLines,operendWorkFile-method
 setMethod(
   "readLines",
-  signature(con="operendWorkFile"),
+  signature(con = "operendWorkFile"),
   function (con, ...) {
     if (isOpen(con)) {
       if (!any(summary(con)$mode == c("r", "rt"))) {
@@ -496,14 +436,14 @@ setMethod(
 
 #' @export
 #' @rdname operendWorkFile-methods
-setGeneric("readRDS", def=function(file, ...) base::readRDS(file, ...))
+setGeneric("readRDS", def = function(file, ...) base::readRDS(file, ...))
 
 #' @export
 #' @rdname operendWorkFile-methods
 #' @aliases readRDS,operendWorkFile-method
 setMethod(
   "readRDS",
-  signature(file="operendWorkFile"),
+  signature(file = "operendWorkFile"),
   function (file, ...) {
     if (isOpen(file)) {
       if (summary(file)$mode != "rb") {
@@ -521,14 +461,14 @@ setMethod(
 
 #' @export
 #' @rdname operendWorkFile-methods
-setGeneric("read.table", def=function(file, ...) utils::read.table(file, ...))
+setGeneric("read.table", def = function(file, ...) utils::read.table(file, ...))
 
 #' @export
 #' @rdname operendWorkFile-methods
 #' @aliases read.table,operendWorkFile-method
 setMethod(
   "read.table",
-  signature(file="operendWorkFile"),
+  signature(file = "operendWorkFile"),
   function (file, ...) {
     read.table(textConnection(readLines(file)), ...)
   }
@@ -536,14 +476,14 @@ setMethod(
 
 #' @export
 #' @rdname operendWorkFile-methods
-setGeneric("read.csv", def=function(file, ...) utils::read.csv(file, ...))
+setGeneric("read.csv", def = function(file, ...) utils::read.csv(file, ...))
 
 #' @export
 #' @rdname operendWorkFile-methods
 #' @aliases read.csv,operendWorkFile-method
 setMethod(
   "read.csv",
-  signature(file="operendWorkFile"),
+  signature(file = "operendWorkFile"),
   function (file, ...) {
     read.csv(textConnection(readLines(file)), ...)
   }
@@ -551,14 +491,14 @@ setMethod(
 
 #' @export
 #' @rdname operendWorkFile-methods
-setGeneric("read.csv2", def=function(file, ...) utils::read.csv2(file, ...))
+setGeneric("read.csv2", def = function(file, ...) utils::read.csv2(file, ...))
 
 #' @export
 #' @rdname operendWorkFile-methods
 #' @aliases read.csv2,operendWorkFile-method
 setMethod(
   "read.csv2",
-  signature(file="operendWorkFile"),
+  signature(file = "operendWorkFile"),
   function (file, ...) {
     read.csv2(textConnection(readLines(file)), ...)
   }
@@ -566,14 +506,14 @@ setMethod(
 
 #' @export
 #' @rdname operendWorkFile-methods
-setGeneric("read.delim", def=function(file, ...) utils::read.delim(file, ...))
+setGeneric("read.delim", def = function(file, ...) utils::read.delim(file, ...))
 
 #' @export
 #' @rdname operendWorkFile-methods
 #' @aliases read.delim,operendWorkFile-method
 setMethod(
   "read.delim",
-  signature(file="operendWorkFile"),
+  signature(file = "operendWorkFile"),
   function (file, ...) {
     read.delim(textConnection(readLines(file)), ...)
   }
@@ -581,14 +521,16 @@ setMethod(
 
 #' @export
 #' @rdname operendWorkFile-methods
-setGeneric("read.delim2", def=function(file, ...) utils::read.delim2(file, ...))
+setGeneric(
+  "read.delim2", def = function(file, ...) utils::read.delim2(file, ...)
+)
 
 #' @export
 #' @rdname operendWorkFile-methods
 #' @aliases read.delim2,operendWorkFile-method
 setMethod(
   "read.delim2",
-  signature(file="operendWorkFile"),
+  signature(file = "operendWorkFile"),
   function (file, ...) {
     read.delim2(textConnection(readLines(file)), ...)
   }
@@ -598,14 +540,14 @@ setMethod(
 
 #' @export
 #' @rdname operendWorkFile-methods
-setGeneric("scan", def=function(file, ...) base::scan(file, ...))
+setGeneric("scan", def = function(file, ...) base::scan(file, ...))
 
 #' @export
 #' @rdname operendWorkFile-methods
 #' @aliases scan,operendWorkFile-method
 setMethod(
   "scan",
-  signature(file="operendWorkFile"),
+  signature(file = "operendWorkFile"),
   function (file, ...) {
     if (isOpen(file)) {
       if (!any(summary(file)$mode == c("r", "rt"))) {
@@ -653,7 +595,7 @@ setMethod(
 setMethod(
   "show",
   signature("operendDate"),
-  function (object) cat(as(object, "character"), sep="\n")
+  function (object) cat(as(object, "character"), sep = "\n")
 )
 
 #' @export
@@ -671,10 +613,10 @@ setMethod(
     for (variableName in names(object)) {
       # Construct a character representation of the slot's contents
       value <- object[[variableName]]
-      variableType <- entityClassDef@variables[[variableName]]@type
-      if (variableType == "J") {
+      variable <- entityClassDef@variables[[variableName]]
+      if (variable@type == "J") {
         labels <- paste("JobRun", value)
-      } else if (variableType == "W") {
+      } else if (variable@type == "W") {
         labels <- paste("WorkFile", value)
       } else if (is.character(value)) {
         labels <- sQuote(value)
@@ -682,18 +624,23 @@ setMethod(
         labels <- as(value, "character")
       }
       # Print the name of the slot, and its contents
-      cat("  ", variableName, ": ", sep="")
-      if (length(value) == 1) {
-        cat(labels)
-      } else if (length(value) %in% 2:3) {
-        cat(sprintf("[%s]", paste(labels, collapse=", ")))
-      } else {
-        cat(
-          sprintf(
-            "%d values [%s, %s, ..., %s]",
-            length(value), labels[1], labels[2], labels[length(value)]
+      cat("  ", variableName, ": ", sep = "")
+      if (variable@is_array) {
+        maxElements <- getOption("opeRend")$max_show_entity_array_elements
+        cat(length(value), ifelse(length(value) == 1, "value", "values"))
+        cat(" ")
+        if (length(value) > maxElements) {
+          cat(
+            sprintf(
+              "[%s, %s, ..., %s]",
+              length(value), labels[1], labels[2], labels[length(value)]
+            )
           )
-        )
+        } else {
+          cat(sprintf("[%s]", length(value), paste(labels, collapse = ", ")))
+        }
+      } else {
+        cat(labels)
       }
       cat("\n")
     }
@@ -723,7 +670,7 @@ setMethod(
         stop(
           "Invalid operendEntityList object: ",
           "contains objects of more than Entity class ",
-          "(", paste(entityClass, collapse=","), ")"
+          "(", paste(entityClass, collapse = ","), ")"
         )
       } else {
         cat("List of", length(object), entityClass, "Entity records\n")
@@ -747,35 +694,35 @@ setMethod(
     cat("Description:", object@description, "\n")
     cat("Variables:\n")
     variableTypes <- c(
-      B="Boolean", C="Code", D="Date", E="Entity", F="Float", I="Integer",
-      J="JobRun", T="Text", W="WorkFile"
+      B = "Boolean", C = "Code", D = "Date", E = "Entity", F = "Float",
+      I = "Integer", J = "JobRun", T = "Text", W = "WorkFile"
     )
     fieldWidths <- c(
-      Name=max(nchar(names(object@variables))),
-      Array=max(nchar(c(TRUE,FALSE))),
-      Type=0
+      Name = max(nchar(names(object@variables))),
+      Array = max(nchar(c(TRUE,FALSE))),
+      Type = 0
     )
-    fmt <- setNames(paste0("%-", fieldWidths, "s"), nm=names(fieldWidths))
+    fmt <- setNames(paste0("%-", fieldWidths, "s"), nm = names(fieldWidths))
     # Write an indented column header
     cat("  ")
-    cat(sprintf(fmt=fmt, names(fmt)), "\n")
+    cat(sprintf(fmt = fmt, names(fmt)), "\n")
     for (i in seq_along(object@variables)) {
       variable <- object@variables[[i]]
       # Write an indented line for each variable
       cat("  ")
       cat(
-        sprintf(fmt=fmt["Name"], names(object@variables)[i]),
-        sprintf(fmt=fmt["Array"], variable@is_array),
-        sprintf(fmt=fmt["Type"], variableTypes[[variable@type]])
+        sprintf(fmt = fmt["Name"], names(object@variables)[i]),
+        sprintf(fmt = fmt["Array"], variable@is_array),
+        sprintf(fmt = fmt["Type"], variableTypes[[variable@type]])
       )
       # Add a qualifier for specific variable types
       if (variable@type == "C") {
         cat(
-          " [", paste(sQuote(names(variable@codes)), collapse=", "), "]",
-          sep=""
+          " [", paste(sQuote(names(variable@codes)), collapse = ", "), "]",
+          sep = ""
         )
       } else if (variable@type == "E") {
-        cat(" (", variable@entity_class_name, ")", sep="")
+        cat(" (", variable@entity_class_name, ")", sep = "")
       }
       cat("\n")
     }
@@ -802,19 +749,19 @@ setMethod(
     if (length(object)) {
       cat("List of", length(object), "Entity class definitions\n")
       fieldWidths <- c(
-        Name=max(nchar(sapply(object, objectId))),
-        Description=0
+        Name = max(nchar(sapply(object, objectId))),
+        Description = 0
       )
-      fmt <- setNames(paste0("%-", fieldWidths, "s"), nm=names(fieldWidths))
+      fmt <- setNames(paste0("%-", fieldWidths, "s"), nm = names(fieldWidths))
       # Write an indented column header
       cat("  ")
-      cat(sprintf(fmt=fmt, names(fmt)), "\n")
+      cat(sprintf(fmt = fmt, names(fmt)), "\n")
       for (i in seq_along(object)) {
         # Write an indented line for each Entity class
         cat("  ")
         cat(
-          sprintf(fmt=fmt["Name"], objectId(object[[i]])),
-          sprintf(fmt=fmt["Description"], object[[i]]@description)
+          sprintf(fmt = fmt["Name"], objectId(object[[i]])),
+          sprintf(fmt = fmt["Description"], object[[i]]@description)
         )
         cat("\n")
       }
@@ -836,7 +783,7 @@ setMethod(
     cat("\n")
     cat("Members:\n")
     for (i in seq_along(object@users)) {
-      cat("  ", objectId(object@users[[i]]), "\n", sep="")
+      cat("  ", objectId(object@users[[i]]), "\n", sep = "")
     }
     invisible(NULL)
   }
@@ -855,7 +802,7 @@ setMethod(
       if (length(ids) == 1) {
         ids
       } else if (length(ids) %in% 2:3) {
-        sprintf("[%s]", paste(ids, collapse=", "))
+        sprintf("[%s]", paste(ids, collapse = ", "))
       } else {
         sprintf(
           "%d values [%s, %s, ..., %s]",
@@ -897,7 +844,7 @@ setMethod(
     if (length(value)) {
       cat("  Subtasks:\n")
       for (i in seq_along(value)) {
-        cat("    ", value[[i]]@name, "\n", sep="")
+        cat("    ", value[[i]]@name, "\n", sep = "")
       }
     }
     # Print status history
@@ -936,8 +883,8 @@ setMethod(
   function (object)
   {
     permissionNames <- c(
-      "C"="Create", "R"="Read", "U"="Update", "D"="Delete", 
-      "PR"="Permissions read", "PU"="Permissions update"
+      "C" = "Create", "R" = "Read", "U" = "Update", "D" = "Delete", 
+      "PR" = "Permissions read", "PU" = "Permissions update"
     )
     cat("Permissions:\n")
     for (group in setdiff(names(object), "_other")) {
@@ -945,7 +892,7 @@ setMethod(
       if (length(object[[group]]) == 0) {
         cat("None") 
       } else {
-        cat(paste(permissionNames[object[[group]]], collapse=", "))
+        cat(paste(permissionNames[object[[group]]], collapse = ", "))
       }
       cat("\n")
     }
@@ -953,7 +900,7 @@ setMethod(
     if (length(object[["_other"]]) == 0) {
       cat("None")
     } else {
-      cat(paste(permissionNames[object$`_other`], collapse=", "))
+      cat(paste(permissionNames[object$`_other`], collapse = ", "))
     }
     cat("\n")
     invisible(NULL)
@@ -973,10 +920,10 @@ setMethod(
       sprintf(
         "Grants the following authorizations to user '%s': %s",
         object@username,
-        paste(sQuote(object@authorizations), collapse=", ")
+        paste(sQuote(object@authorizations), collapse = ", ")
       ),
       paste("Created:", object@creationDate),
-      sep="\n"
+      sep = "\n"
     )
     invisible(NULL)
   }
@@ -1003,9 +950,26 @@ setMethod(
     cat(sprintf("  Name: %s %s\n", object@firstName, object@lastName))
     cat(sprintf("  Email: %s\n", object@email))
     cat(
-      sprintf("  Member of groups: %s\n", paste(object@groups, collapse=", "))
+      sprintf("  Member of groups: %s\n", paste(object@groups, collapse = ", "))
     )
     cat(sprintf("  Default group: %s\n", object@group))
+    authMethods <- c(
+      canAuthViaPassword  = "password",
+      canAuthViaGoogle    = "Google",
+      canAuthViaMicrosoft = "Microsoft",
+      canAuthViaCILogon   = "CILogon"
+    )
+    cat(
+      sprintf(
+        "  Can authorize using: %s\n",
+        paste(
+          authMethods[
+            mapply(slot, object = list(object), name = names(authMethods))
+          ],
+          collapse = ", "
+        )
+      )
+    )
     cat(sprintf("  Date joined: %s\n", object@dateJoined))
     cat(sprintf("  Last login: %s\n", object@lastLogin))
     invisible(NULL)
@@ -1032,7 +996,7 @@ setMethod(
       cat("  File type:", object@fileType)
       cat("\n")
     }
-    cat("  File size:", format(object@length, big.mark=","), "bytes\n")
+    cat("  File size:", format(object@length, big.mark = ","), "bytes\n")
     # Print metadata
     cat("  Uploaded ")
     if (nchar(object@originalName)) {

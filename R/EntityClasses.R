@@ -1,4 +1,4 @@
-#' @import rjson
+#' @importFrom jsonlite fromJSON
 
 #' @rdname EntityClasses
 #' @name EntityClasses
@@ -27,11 +27,14 @@
 #' An optional \code{\linkS4class{operendPermissions}} object
 #' specifying the permissions to be used when creating or updating the record
 #' @param verbosity
-#' A value coercible to a nonnegative integer, specifying the verbosity level.
-#' A value of FALSE, TRUE, 0 or 1 does not produce any messages.
-#' A value of 2 instructs the curl calls to produce verbose output.
-#' A value greater than 2 produces additional output, including the value of the
-#' \code{content} parameter.
+#' An integer-coercible value specifying the verbosity level:
+#' \describe{
+#'   \item{\code{0}}{Do not print messages}
+#'   \item{\code{1}}{Print only high-level messages}
+#'   \item{\code{2}}{Show headers}
+#'   \item{\code{3}}{Show headers and bodies}
+#'   \item{\code{4+}}{Show headers, bodies, and curl status messages}
+#' }
 #' Defaults to \code{getOption("opeRend")$verbosity}.
 #' @details
 #' If \code{updateEntityClass} is called without argument \code{file}, both of
@@ -58,7 +61,7 @@
 
 #' @export
 addEntityClass <- function (
-  file, permissions, verbosity=getOption("opeRend")$verbosity
+  file, permissions, verbosity = getOption("opeRend")$verbosity
 )
 {
   # Check arguments for errors
@@ -68,7 +71,7 @@ addEntityClass <- function (
     # Use normalizePath() to expand path to file,
     # converting any warning to an error
     file <- tryCatch(
-      normalizePath(file, mustWork=NA),
+      normalizePath(file, mustWork = NA),
       warning = function (condition) {
         stop(
           "Invalid filename ", sQuote(file), ":\n",
@@ -100,9 +103,12 @@ addEntityClass <- function (
   on.exit(close(file))
 
   # Read the class definition from 'file' and throw error if invalid JSON
-  classDefinition <- paste(readLines(file), collapse="")
   classDefinition <- tryCatch(
-    rjson::fromJSON(classDefinition),
+    if (is(file, "connection") && summary(file)$text == "text") {
+      jsonlite::fromJSON(readLines(file))
+    } else {
+      jsonlite::fromJSON(file)
+    },
     error = function (condition) {
       stop("Argument 'file' does not contain valid JSON")
     }
@@ -111,12 +117,12 @@ addEntityClass <- function (
   # Add permissions (or overwrite any that were present in the JSON file)
   if (!missing(permissions)) classDefinition$permissions <- permissions
 
-  # Preprocess list (in case permissions were added), convert to JSON,
+  # Preprocess list (in case permissions were added),
   # submit POST request, and convert response to an operendEntityClass object
   result <- operendPostprocess(
     operendApiCall(
-      url = operendApiUrl("EntityClasses"), method = "POST",
-      content = rjson::toJSON(operendPreprocess(classDefinition)),
+      path = "EntityClasses", method = "POST",
+      content = operendPreprocess(classDefinition),
       verbosity = verbosity
     )
   )
@@ -132,7 +138,7 @@ addEntityClass <- function (
 #' @export
 #' @rdname EntityClasses
 deleteEntityClass <- function (
-  name, verbosity=getOption("opeRend")$verbosity
+  name, verbosity = getOption("opeRend")$verbosity
 )
 {
   # Check arguments for errors
@@ -149,9 +155,9 @@ deleteEntityClass <- function (
   }
 
   # Submit DELETE request; if successful, the response should be:
-  #   list(success=TRUE)
+  #   list(success = TRUE)
   response <- operendApiCall(
-    url = operendApiUrl("EntityClasses", name), method = "DELETE"
+    path = c("EntityClasses", name), method = "DELETE"
   )
 
   # If the API call did not throw an error, print a message if requested,
@@ -164,7 +170,7 @@ deleteEntityClass <- function (
 
 #' @export
 #' @rdname EntityClasses
-getEntityClass <- function (name, verbosity=getOption("opeRend")$verbosity)
+getEntityClass <- function (name, verbosity = getOption("opeRend")$verbosity)
 {
   # Check arguments for errors
   if (missing(name)) {
@@ -182,7 +188,7 @@ getEntityClass <- function (name, verbosity=getOption("opeRend")$verbosity)
   # Submit GET request and return response as operendEntityClass object
   operendPostprocess(
     operendApiCall(
-      url = operendApiUrl("EntityClasses", name), method = "GET",
+      path = c("EntityClasses", name), method = "GET",
       verbosity = verbosity
     )
   )
@@ -196,7 +202,7 @@ listEntityClasses <- function ()
   new(
     "operendEntityClassList",
     listData = operendPostprocess(
-      operendApiCall(url = operendApiUrl("EntityClasses"), method = "GET")
+      operendApiCall(path = "EntityClasses", method = "GET")
     )
   )
 }
@@ -204,7 +210,7 @@ listEntityClasses <- function ()
 #' @export
 #' @rdname EntityClasses
 updateEntityClass <- function (
-  name, file, permissions, verbosity=getOption("opeRend")$verbosity
+  name, file, permissions, verbosity = getOption("opeRend")$verbosity
 )
 {
   # Check arguments for errors
@@ -219,7 +225,7 @@ updateEntityClass <- function (
       # Use normalizePath() to expand path to file,
       # converting any warning to an error
       file <- tryCatch(
-        normalizePath(file, mustWork=NA),
+        normalizePath(file, mustWork = NA),
         warning = function (condition) {
           stop(
             "Invalid filename ", sQuote(file), ":\n",
@@ -255,7 +261,7 @@ updateEntityClass <- function (
 
   if (missing(file)) {
     # If JSON input wasn't provided, initialize dummy list with EntityClass name
-    classDefinition <- list(name=name)
+    classDefinition <- list(name = name)
   } else {
     # If needed, establish and open file connection, closing on exit
     if (is.character(file)) file <- file(file, "rt")
@@ -263,9 +269,12 @@ updateEntityClass <- function (
     on.exit(close(file))
 
     # Read the class definition from 'file' and throw error if invalid JSON
-    classDefinition <- paste(readLines(file), collapse="")
     classDefinition <- tryCatch(
-      rjson::fromJSON(classDefinition),
+      if (is(file, "connection") && summary(file)$text == "text") {
+        jsonlite::fromJSON(readLines(file))
+      } else {
+        jsonlite::fromJSON(file)
+      },
       error = function (condition) {
         stop("Argument 'file' does not contain valid JSON")
       }
@@ -289,12 +298,12 @@ updateEntityClass <- function (
   # Add permissions (or overwrite any that were present in the JSON file)
   if (!missing(permissions)) classDefinition$permissions <- permissions
 
-  # Preprocess list (in case permissions were added), convert to JSON,
+  # Preprocess list (in case permissions were added),
   # submit PUT request, and convert response to an operendEntityClass object
   result <- operendPostprocess(
     operendApiCall(
-      url = operendApiUrl("EntityClasses", name), method = "PUT",
-      content = rjson::toJSON(operendPreprocess(classDefinition)),
+      path = c("EntityClasses", name), method = "PUT",
+      content = operendPreprocess(classDefinition),
       verbosity = verbosity
     )
   )

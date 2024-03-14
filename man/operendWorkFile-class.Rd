@@ -6,7 +6,11 @@
 \alias{operendWorkFile}
 \title{Class to provide a read-only connection to a WorkFile}
 \usage{
-operendWorkFile(id, open = c("", "r", "rt", "rb"))
+operendWorkFile(
+  id,
+  open = c("", "r", "rt", "rb"),
+  method = getOption("url.method")
+)
 }
 \arguments{
 \item{id}{An integer-coercible value specifying the unique identifier of a
@@ -19,6 +23,9 @@ operendWorkFile(id, open = c("", "r", "rt", "rb"))
   \item{"rb"}{The connection is operend in read-only binary mode.}
 }
 An \code{operendWorkFile} may not be opened for writing or appending.}
+
+\item{method}{A character string specifying the URL connection method;
+defaults to the 'url.method' option}
 }
 \value{
 An \code{operendWorkFile} object, containing

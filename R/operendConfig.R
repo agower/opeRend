@@ -1,5 +1,5 @@
 #' @importFrom configr is.ini.file read.config
-#' @importFrom rjson fromJSON
+#' @importFrom jsonlite fromJSON
 
 #' @export
 #' @rdname operendConfig
@@ -34,9 +34,10 @@ getOperendConfig <- function (
 
   # Initialize list of options with defaults
   result <- list(
-    api_base_url = "https://localhost/api/v2",
-    timezone     = "UTC",
-    verbosity    = 1L
+    api_base_url                   = "https://localhost/api/v2",
+    max_show_entity_array_elements = 10,
+    timezone                       = "UTC",
+    verbosity                      = 1L
   )
 
   if (configFile == "") {
@@ -53,7 +54,7 @@ getOperendConfig <- function (
     # Use normalizePath() to expand path to config file,
     # converting any warning to an error
     configFile <- tryCatch(
-      normalizePath(configFile, mustWork=NA),
+      normalizePath(configFile, mustWork = NA),
       warning = function (condition) {
         stop(
           "Invalid config filename ", sQuote(configFile), ":\n",
@@ -66,7 +67,7 @@ getOperendConfig <- function (
     if (!configr::is.ini.file(configFile)) {
       stop("Config file ", sQuote(configFile), " is not a valid INI file")
     }
-    configList <- configr::read.config(configFile, file.type="ini")
+    configList <- configr::read.config(configFile, file.type = "ini")
     params <- configList[[config]]
     if (is.null(params)) {
       stop("Config ", sQuote(config), " was not found in ", sQuote(configFile))
@@ -77,7 +78,7 @@ getOperendConfig <- function (
       stop("Config ", sQuote(config), " does not contain a token")
     } else {
       params$token <- tryCatch(
-        do.call(operendToken, args=rjson::fromJSON(params$token)),
+        do.call(operendToken, args = jsonlite::fromJSON(params$token)),
         error = function (condition) {
           stop(
             "Config ", sQuote(config), " does not contain a valid token:\n",

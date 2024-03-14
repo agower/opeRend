@@ -19,10 +19,14 @@
 #' A logical value specifying whether to return the listing as a data frame.
 #' Defaults to \code{TRUE}.
 #' @param verbosity
-#' A value coercible to a nonnegative integer, specifying the verbosity level.
-#' A value of FALSE, TRUE, 0 or 1 does not produce any messages.
-#' A value of 2 instructs the curl calls to produce verbose output.
-#' A value greater than 2 produces additional output.
+#' An integer-coercible value specifying the verbosity level:
+#' \describe{
+#'   \item{\code{0}}{Do not print messages}
+#'   \item{\code{1}}{Print only high-level messages}
+#'   \item{\code{2}}{Show headers}
+#'   \item{\code{3}}{Show headers and bodies}
+#'   \item{\code{4+}}{Show headers, bodies, and curl status messages}
+#' }
 #' Defaults to \code{getOption("opeRend")$verbosity}.
 #' @return
 #' \describe{
@@ -48,7 +52,7 @@
 
 #' @export
 addUser <- function (
-  username, ..., verbosity=getOption("opeRend")$verbosity
+  username, ..., verbosity = getOption("opeRend")$verbosity
 )
 {
   if (missing(username)) {
@@ -70,16 +74,15 @@ addUser <- function (
       stop(paste("Email address", sQuote(fields$email), "is already in use"))
     }
   }
-  # Coerce 'groups' of length 1 to list so toJSON() will convert to array
-  if (length(fields$groups) == 1) {
-    fields$groups <- list(unname(fields$groups))
-  }
+  # Use I() to prevent jsonlite::toJSON() from automatically unboxing
+  # 'groups' of length 1
+  fields$groups <- I(fields$groups)
   # Submit POST request and convert response to operendUser object
   result <- operendPostprocess(
     operendApiCall(
-      url=operendApiUrl("Users"), method="POST",
-      content=operendPreprocess(list(username=username, ...)),
-      verbosity=verbosity
+      path = "Users", method = "POST",
+      content = operendPreprocess(list(username = username, ...)),
+      verbosity = verbosity
     )
   )
   if (verbosity > 0) {
@@ -100,13 +103,13 @@ getUser <- function (username)
   }
 
   operendPostprocess(
-    operendApiCall(url=operendApiUrl("Users", username), method="GET")
+    operendApiCall(path = c("Users", username), method = "GET")
   )
 }
 
 #' @export
 #' @rdname Users
-listUsers <- function (active=TRUE, asDataFrame=TRUE)
+listUsers <- function (active = TRUE, asDataFrame = TRUE)
 {
   # Check arguments for errors
   if (!missing(active)) {
@@ -115,33 +118,34 @@ listUsers <- function (active=TRUE, asDataFrame=TRUE)
     }
   }
   if (!missing(asDataFrame)) {
-    if (
-      !is.logical(asDataFrame) || length(asDataFrame) != 1 || is.na(asDataFrame)
-    ) {
-      stop("Argument 'asDataFrame' must be a non-NA logical value")
+    asDataFrame <- suppressWarnings(as.logical(asDataFrame))
+    if (length(asDataFrame) != 1 || is.na(asDataFrame)) {
+      stop(
+        "Argument 'asDataFrame' ",
+        "must be coercible to a single non-NA logical value"
+      )
     }
   }
 
   fields <- list()
   if (!is.na(active)) fields$active <- active
-  # Submit GET request and return response as operendUserList object
-  result <- new(
-    "operendUserList",
-    listData = operendPostprocess(
-      operendApiCall(
-        url = operendApiUrl("Users", query = operendPreprocess(fields)),
-        method = "GET"
-      )
-    )
+  # Submit GET request, converting result to data frame if requested
+  result <- operendApiCall(
+    path = "Users", query = operendPreprocess(fields),
+    method = "GET", simplifyDataFrame = asDataFrame
   )
-  # Then, if requested, convert to a data frame
-  if (asDataFrame) as(result, "data.frame") else result
+  # If the result was not requested as a data frame, convert to operendUserList
+  if (!asDataFrame) {
+    result <- new("operendUserList", listData = operendPostprocess(result))
+  }
+  # Return result
+  result
 }
 
 #' @export
 #' @rdname Users
 updateUser <- function (
-  username, ..., verbosity=getOption("opeRend")$verbosity
+  username, ..., verbosity = getOption("opeRend")$verbosity
 )
 {
   if (missing(username)) {
@@ -157,14 +161,13 @@ updateUser <- function (
   }
 
   fields <- list(...)
-  # Coerce 'groups' of length 1 to list so toJSON() will convert to array
-  if (length(fields$groups) == 1) {
-    fields$groups <- list(unname(fields$groups))
-  }
+  # Use I() to prevent jsonlite::toJSON() from automatically unboxing
+  # 'groups' of length 1
+  fields$groups <- I(fields$groups)
   # Submit a PUT request and convert the response to an S4 object
   result <- operendPostprocess(
     operendApiCall(
-      url = operendApiUrl("Users", username), method = "PUT",
+      path = c("Users", username), method = "PUT",
       content = operendPreprocess(fields),
       verbosity = verbosity
     )

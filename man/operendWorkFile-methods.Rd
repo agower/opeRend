@@ -77,7 +77,7 @@ scan(file, ...)
 
 \item{what}{(For \code{readRDS})
 Either an object whose mode will give the mode of the vector to be read,
-or a character vector of length one describing the mode: one of "numeric",
+or a character vector of length 1 describing the mode: one of "numeric",
 "double", "integer", "int", "logical", "complex", "character", "raw"}
 
 \item{n}{(For \code{readRDS})
