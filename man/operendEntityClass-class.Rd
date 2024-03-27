@@ -22,10 +22,10 @@ Defaults to \code{""}.}
 any variables associated with the record.}
 
 \item{\code{_updated}}{A character string specifying the time and date at which the record was last
-updated. Defaults to \code{""}.}
+updated. Defaults to \code{NA}.}
 
 \item{\code{_creation_date}}{A character string specifying the time and date at which the record was
-created. Defaults to \code{""}.}
+created. Defaults to \code{NA}.}
 
 \item{\code{creator}}{A character string specifying the \code{username} of the User
 who created the record. Defaults to \code{""}.}

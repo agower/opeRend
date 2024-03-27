@@ -13,13 +13,15 @@
 
 ### operendDate ################################################################
 
-# Note: as.POSIXct() cannot accept "%Z" as input in the format string
+# Note: strptime() cannot accept "%Z" as input in the format string
 setAs(
   from = "character", to = "operendDate",
   def = function (from) {
     tz <- getOption("opeRend")$timezone
     operendDate(
-      as.POSIXct(from, tz = tz, format = paste("%a %b %d %T", tz, "%Y"))
+      as.POSIXct(
+        strptime(from, tz = tz, format = paste("%a %b %d %T", tz, "%Y"))
+      )
     )
   }
 )
@@ -633,11 +635,11 @@ setMethod(
           cat(
             sprintf(
               "[%s, %s, ..., %s]",
-              length(value), labels[1], labels[2], labels[length(value)]
+              labels[1], labels[2], labels[length(value)]
             )
           )
         } else {
-          cat(sprintf("[%s]", length(value), paste(labels, collapse = ", ")))
+          cat(sprintf("[%s]", paste(labels, collapse = ", ")))
         }
       } else {
         cat(labels)
@@ -647,9 +649,9 @@ setMethod(
     # Print metadata
     cat(
       "Created by", object@`_creator`,
-      "on", as(object@`_creation_date`, "character"), "\n"
+      "on", object@`_creation_date`, "\n"
     )
-    cat("Last updated:", as(object@`_updated`, "character"), "\n")
+    cat("Last updated:", object@`_updated`, "\n")
     cat("Owned by:", object@`_owner`, "\n")
     show(objectPermissions(object))
     invisible(NULL)
@@ -729,9 +731,9 @@ setMethod(
     # Print metadata
     cat(
       "Created by", object@creator,
-      "on", as(object@`_creation_date`, "character"), "\n"
+      "on", object@`_creation_date`, "\n"
     )
-    cat("Last updated:", as(object@`_updated`, "character"), "\n")
+    cat("Last updated:", object@`_updated`, "\n")
     cat("Owned by:", object@owner, "\n")
     show(objectPermissions(object))
     invisible(NULL)
@@ -1004,7 +1006,7 @@ setMethod(
     }
     cat(
       "by", object@creator,
-      "on", as(object@creationDatetime, "character")
+      "on", object@creationDatetime
     )
     cat("\n")
     cat("  Token:", object@token)

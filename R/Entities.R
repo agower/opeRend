@@ -92,10 +92,13 @@ addEntity <- function (
   }
 
   # If the current Entity class definition is not the cache,
+  # or if any of the variables in the input are not in that definition,
   # retrieve it from the Operend Core server and place it in the cache
-  if (exists(class, operendEntityClassCache)) {
+  cached <- exists(class, operendEntityClassCache)
+  if (cached) {
     entityClassDef <- get(class, operendEntityClassCache)
-  } else {
+  }
+  if (!cached || !all(names(variables) %in% names(entityClassDef@variables))) {
     entityClassDef <- getEntityClass(class)
     assign(x = class, value = entityClassDef, envir = operendEntityClassCache)
   }
@@ -233,10 +236,13 @@ listEntities <- function (class, variables = list())
   }
 
   # If the current Entity class definition is not the cache,
+  # or if any of the variables in the input are not in that definition,
   # retrieve it from the Operend Core server and place it in the cache
-  if (exists(class, operendEntityClassCache)) {
+  cached <- exists(class, operendEntityClassCache)
+  if (cached) {
     entityClassDef <- get(class, operendEntityClassCache)
-  } else {
+  }
+  if (!cached || !all(names(variables) %in% names(entityClassDef@variables))) {
     entityClassDef <- getEntityClass(class)
     assign(x = class, value = entityClassDef, envir = operendEntityClassCache)
   }
@@ -332,10 +338,14 @@ updateEntity <- function (
     object <- getEntity(id, verbosity = verbosity)
     class <- slot(object, "_class")
     # If the current Entity class definition is not the cache,
+    # or if any of the variables in the input are not in that definition,
     # retrieve it from the Operend Core server and place it in the cache
-    if (exists(class, operendEntityClassCache)) {
+    cached <- exists(class, operendEntityClassCache)
+    if (cached) {
       entityClassDef <- get(class, operendEntityClassCache)
-    } else {
+    }
+    if (!cached || !all(names(variables) %in% names(entityClassDef@variables)))
+    {
       entityClassDef <- getEntityClass(class)
       assign(x = class, value = entityClassDef, envir = operendEntityClassCache)
     }
@@ -347,16 +357,16 @@ updateEntity <- function (
         paste(sQuote(names(variables)[i]), collapse = ", ")
       )
       variables <- variables[-i]
-      if (length(variables)) {
-        # Add variables to list of fields
-        fields <- c(fields, variables)
-        # Get character vector of names of array-type variables
-        arrayVariables <- names(
-          which(
-            sapply(entityClassDef@variables[names(variables)], slot, "is_array")
-          )
+    }
+    if (length(variables)) {
+      # Add variables to list of fields
+      fields <- c(fields, variables)
+      # Get character vector of names of array-type variables
+      arrayVariables <- names(
+        which(
+          sapply(entityClassDef@variables[names(variables)], slot, "is_array")
         )
-      }
+      )
     }
   }
 

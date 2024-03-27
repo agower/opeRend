@@ -42,8 +42,7 @@ trashed. Defaults to \code{FALSE}.}
 \item{\code{isTransient}}{A logical value specifying whether the WorkFile is flagged as
 temporary. Defaults to \code{FALSE}.}
 
-\item{\code{creationDatetime}}{An \code{\linkS4class{operendDate}} object specifying the date and time that
-the record was created.
+\item{\code{creationDatetime}}{A character string specifying the date and time that the record was created.
 Automatically populated when the file is uploaded.}
 
 \item{\code{length}}{A numeric value specifying the length of the file in bytes.

@@ -242,8 +242,8 @@ operendUser <- setClass(
     superuser           = "logical",
     isReadOnlyUser      = "logical",
     confirmed           = "logical",
-    lastLogin           = "operendDate",
-    dateJoined          = "operendDate",
+    lastLogin           = "character",
+    dateJoined          = "character",
     group               = "character",
     groups              = "character",
     canAuthViaPassword  = "logical",
@@ -262,8 +262,8 @@ operendUser <- setClass(
     superuser           = FALSE,
     isReadOnlyUser      = FALSE,
     confirmed           = FALSE,
-    lastLogin           = new("operendDate"),
-    dateJoined          = new("operendDate"),
+    lastLogin           = NA_character_,
+    dateJoined          = NA_character_,
     group               = "",
     groups              = character(),
     canAuthViaPassword  = FALSE,
@@ -422,8 +422,7 @@ operendWorkFileIdList <- function (...)
 #' A logical value specifying whether the WorkFile is flagged as
 #' temporary. Defaults to \code{FALSE}.
 #' @slot creationDatetime
-#' An \code{\linkS4class{operendDate}} object specifying the date and time that
-#' the record was created.
+#' A character string specifying the date and time that the record was created.
 #' Automatically populated when the file is uploaded.
 #' @slot length
 #' A numeric value specifying the length of the file in bytes.
@@ -452,7 +451,7 @@ operendWorkFileProperties <- setClass(
     fileType             = "character",
     isTrashed            = "logical",
     isTransient          = "logical",
-    creationDatetime     = "operendDate",
+    creationDatetime     = "character",
     length               = "numeric",
     token                = "character",
     permissions          = "operendPermissions"
@@ -470,7 +469,7 @@ operendWorkFileProperties <- setClass(
     fileType             = "",
     isTrashed            = FALSE,
     isTransient          = FALSE,
-    creationDatetime     = new("operendDate"),
+    creationDatetime     = NA_character_,
     length               = 0,
     token                = "",
     permissions          = new("operendPermissions")
@@ -1014,10 +1013,10 @@ operendVariables <- function (...)
 #' any variables associated with the record.
 #' @slot _updated
 #' A character string specifying the time and date at which the record was last
-#' updated. Defaults to \code{""}.
+#' updated. Defaults to \code{NA}.
 #' @slot _creation_date
 #' A character string specifying the time and date at which the record was
-#' created. Defaults to \code{""}.
+#' created. Defaults to \code{NA}.
 #' @slot creator
 #' A character string specifying the \code{username} of the User
 #' who created the record. Defaults to \code{""}.
@@ -1038,8 +1037,8 @@ operendEntityClass <- setClass(
     name             = "character",
     description      = "character",
     variables        = "operendVariables",
-    `_updated`       = "operendDate",
-    `_creation_date` = "operendDate",
+    `_updated`       = "character",
+    `_creation_date` = "character",
     creator          = "character",
     owner            = "character",
     permissions      = "operendPermissions"
@@ -1048,8 +1047,8 @@ operendEntityClass <- setClass(
     name             = "",
     description      = "",
     variables        = new("operendVariables"),
-    `_updated`       = new("operendDate"),
-    `_creation_date` = new("operendDate"),
+    `_updated`       = NA_character_,
+    `_creation_date` = NA_character_,
     creator          = "",
     owner            = "",
     permissions      = new("operendPermissions")
@@ -1098,14 +1097,14 @@ operendEntityClassList <- function (...)
 #' A character string specifying the unique identifier of the record.
 #' @slot _creation_date
 #' A character string specifying the time and date at which the record was
-#' created. Defaults to \code{""}.
+#' created. Defaults to \code{NA}.
 #' @slot _jobruns
 #' An integer vector containing the IDs of any JobRuns associated with the
 #' record; used internally by the server-side app.
 #' Defaults to an empty vector.
 #' @slot _updated
 #' A character string specifying the time and date at which the record was last
-#' updated. Defaults to \code{""}.
+#' updated. Defaults to \code{NA}.
 #' @slot _workfiles
 #' An integer vector containing the IDs of any WorkFiles associated with the
 #' record; used internally by the server-side app.
@@ -1130,9 +1129,9 @@ operendEntity <- setClass(
   slots = c(
     `_class`         = "character",
     `_entity_id`     = "character",
-    `_creation_date` = "operendDate",
+    `_creation_date` = "character",
     `_jobruns`       = "integer",
-    `_updated`       = "operendDate",
+    `_updated`       = "character",
     `_workfiles`     = "integer",
     `_creator`       = "character",
     `_owner`         = "character",
@@ -1141,9 +1140,9 @@ operendEntity <- setClass(
   prototype = prototype(
     `_class`         = "",
     `_entity_id`     = "",
-    `_creation_date` = new("operendDate"),
+    `_creation_date` = NA_character_,
     `_jobruns`       = integer(),
-    `_updated`       = new("operendDate"),
+    `_updated`       = NA_character_,
     `_workfiles`     = integer(),
     `_creator`       = "",
     `_owner`         = "",
@@ -1161,7 +1160,6 @@ operendEntity <- setClass(
 #' This class directly extends class \code{\linkS4class{SimpleList}}.
 #' @author Adam C. Gower \email{agower@@bu.edu}
 
-# Container for a list of operendEntity objects
 setClass(
   "operendEntityList",
   prototype = new("SimpleList", elementType = "operendEntity"),

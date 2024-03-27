@@ -19,14 +19,14 @@ Defaults to \code{""}.}
 \item{\code{_entity_id}}{A character string specifying the unique identifier of the record.}
 
 \item{\code{_creation_date}}{A character string specifying the time and date at which the record was
-created. Defaults to \code{""}.}
+created. Defaults to \code{NA}.}
 
 \item{\code{_jobruns}}{An integer vector containing the IDs of any JobRuns associated with the
 record; used internally by the server-side app.
 Defaults to an empty vector.}
 
 \item{\code{_updated}}{A character string specifying the time and date at which the record was last
-updated. Defaults to \code{""}.}
+updated. Defaults to \code{NA}.}
 
 \item{\code{_workfiles}}{An integer vector containing the IDs of any WorkFiles associated with the
 record; used internally by the server-side app.

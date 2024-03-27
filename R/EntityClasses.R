@@ -127,6 +127,9 @@ addEntityClass <- function (
     )
   )
 
+  # Add the EntityClass definition to the cache
+  assign(x = objectId(result), value = result, envir = operendEntityClassCache)
+
   # If the API call did not throw an error, print a message if requested,
   # and return the result visibly so that the user can see the new record
   if (verbosity > 0) {
@@ -185,26 +188,43 @@ getEntityClass <- function (name, verbosity = getOption("opeRend")$verbosity)
     )
   }
 
-  # Submit GET request and return response as operendEntityClass object
-  operendPostprocess(
+  # Submit GET request and convert response to an operendEntityClass object
+  result <- operendPostprocess(
     operendApiCall(
       path = c("EntityClasses", name), method = "GET",
       verbosity = verbosity
     )
   )
+
+  # Update the EntityClass definition in the cache
+  assign(x = name, value = result, envir = operendEntityClassCache)
+
+  # Return the result
+  result
 }
 
 #' @export
 #' @rdname EntityClasses
 listEntityClasses <- function ()
 {
-  # Submit GET request and return response as an operendEntityClassList
-  new(
+  # Submit GET request and convert response to an operendEntityClassList object
+  result <- new(
     "operendEntityClassList",
     listData = operendPostprocess(
       operendApiCall(path = "EntityClasses", method = "GET")
     )
   )
+
+  # Add/update EntityClass definitions in the cache
+  for (i in seq_along(result)) {
+    assign(
+      x = objectId(result[[i]]), value = result[[i]],
+      envir = operendEntityClassCache
+    )    
+  }
+
+  # Return the result
+  result
 }
 
 #' @export
@@ -307,6 +327,10 @@ updateEntityClass <- function (
       verbosity = verbosity
     )
   )
+
+  # Update the EntityClass definition in the cache
+  assign(x = name, value = result, envir = operendEntityClassCache)
+
   # If the API call did not throw an error, print a message if requested,
   # and return the result visibly so that the user can see the updated record
   if (verbosity > 0) {

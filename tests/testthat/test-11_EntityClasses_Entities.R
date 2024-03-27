@@ -34,9 +34,8 @@ testEntityClass2Def <- list(
     codeScalar = list(
       name = "Dummy Code scalar-type variable",
       type = "C",
-      codes = list(
-        list("A" = "apple"), list("B" = "banana"), list("C" = "cucumber")
-      ),
+      # Note: code levels are intentionally out of alphabetical order
+      codes = list(list("B" = "before"), list("A" = "after")),
       is_array = FALSE
     ),
     dateScalar = list(
@@ -83,9 +82,8 @@ testEntityClass2Def <- list(
     codeArray = list(
       name = "Dummy Code array-type variable",
       type = "C",
-      codes = list(
-        list("A" = "apple"), list("B" = "banana"), list("C" = "cucumber")
-      ),
+      # Note: code levels are intentionally out of alphabetical order
+      codes = list(list("B" = "before"), list("A" = "after")),
       is_array = TRUE
     ),
     dateArray = list(
@@ -127,10 +125,15 @@ testEntityClass2Def <- list(
   )
 )
 
-testEntity1a <- paste("testEntity", sample(1E6, size = 1)-1, sep = "_")
-testEntity1b <- paste("testEntity", sample(1E6, size = 1)-1, sep = "_")
-testEntity2 <- paste("testEntity", sample(1E6, size = 1)-1, sep = "_")
+# Create random entity names to avoid any collisions
+testEntityId1a <- paste("testEntity", sample(1E6, size = 1)-1, sep = "_")
+testEntityId1b <- paste("testEntity", sample(1E6, size = 1)-1, sep = "_")
+testEntityId2 <- paste("testEntity", sample(1E6, size = 1)-1, sep = "_")
 
+# Initialize a cache to hold operendEntity objects
+entityCache <- new.env()
+
+# Initialize JSON variables used below
 emptyJSON <- "{}"
 invalidJSON <- "invalid JSON"
 testEntityClass1JSON <- jsonlite::toJSON(testEntityClass1Def, auto_unbox = TRUE)
@@ -375,28 +378,30 @@ test_that(
   "addEntity returns an operendEntity object",
   {
     result <- addEntity(
-      class = testEntityClass1, id = testEntity1a,
+      class = testEntityClass1, id = testEntityId1a,
       variables = list(booleanScalar = TRUE),
       permissions = operendPermissions(rootgroup = c("R","U"))
     )
     expect_s4_class(result, class = "operendEntity")
+    entityCache$testEntity1a <- result
     result <- addEntity(
-      class = testEntityClass1, id = testEntity1b,
+      class = testEntityClass1, id = testEntityId1b,
       variables = list(textScalar = "testString"),
       permissions = operendPermissions(rootgroup = c("R","U"))
     )
     expect_s4_class(result, class = "operendEntity")
+    entityCache$testEntity1b <- result
     workFile1 <- addWorkFile(file = testWorkFile)
     workFile2 <- addWorkFile(file = testWorkFile)
     result <- addEntity(
-      class = testEntityClass2, id = testEntity2,
+      class = testEntityClass2, id = testEntityId2,
       variables = list(
         booleanScalar  = TRUE,          booleanArray = c(TRUE,FALSE,TRUE),
-        codeScalar     = "A",           codeArray    = c("C","A","B"),
+        codeScalar     = "A",           codeArray    = c("A","B"),
         dateScalar     = as(Sys.time(), "operendDate"),
         dateArray      = as(0:1, "operendDate"),
-        entityScalar   = testEntity1a,
-        entityArray    = c(testEntity1a, testEntity1b),
+        entityScalar   = testEntityId1a,
+        entityArray    = c(testEntityId1a, testEntityId1b),
         floatScalar    = pi,            floatArray   = sqrt(1:3),
         integerScalar  = 0L,            integerArray = 1:10, 
 #        jobRunScalar   = 0L,
@@ -408,6 +413,16 @@ test_that(
       permissions = operendPermissions(rootgroup = c("R","U"))
     )
     expect_s4_class(result, class = "operendEntity")
+    entityCache$testEntity2 <- result
+    # Check that factor levels are in the same order as in the class definition
+    expect_identical(
+      levels(entityCache$testEntity2$codeScalar),
+      sapply(testEntityClass2Def$variables$codeScalar$codes, names)
+    )
+    expect_identical(
+      levels(entityCache$testEntity2$codeArray),
+      sapply(testEntityClass2Def$variables$codeArray$codes, names)
+    )
     purgeWorkFile(workFile1@id)
     purgeWorkFile(workFile2@id)
   }
@@ -431,8 +446,10 @@ test_that(
 test_that(
   "getEntity returns an operendEntity object",
   {
-    result <- getEntity(id = testEntity1a)
+    result <- getEntity(id = testEntityId1a)
     expect_s4_class(result, class = "operendEntity")
+    # Check whether the result is identical to the cached version
+    expect_identical(result, entityCache$testEntity1a)
   }
 )
 
@@ -481,7 +498,7 @@ test_that(
   "updateEntity correctly handles arguments",
   {
     # Arguments 'id' and 'variables' must both be present
-    expect_error(updateEntity(id = testEntity1a))
+    expect_error(updateEntity(id = testEntityId1a))
     expect_error(updateEntity(variables = list(booleanScalar = FALSE)))
     # Argument 'id' must be a non-empty character string
     expect_error(updateEntity(id = 0L, variables = list(booleanScalar = FALSE)))
@@ -494,26 +511,26 @@ test_that(
     )
     # Argument 'variables' must be a list of nonzero length
     # with valid and unique names
-    expect_error(updateEntity(id = testEntity1a, variables = letters))
-    expect_error(updateEntity(id = testEntity1a, variables = list()))
-    expect_error(updateEntity(id = testEntity1a, variables = list(1)))
+    expect_error(updateEntity(id = testEntityId1a, variables = letters))
+    expect_error(updateEntity(id = testEntityId1a, variables = list()))
+    expect_error(updateEntity(id = testEntityId1a, variables = list(1)))
     expect_error(
-      updateEntity(id = testEntity1a, variables = setNames(list(1), NA))
+      updateEntity(id = testEntityId1a, variables = setNames(list(1), NA))
     )
     expect_error(
-      updateEntity(id = testEntity1a, variables = list(a = 1, a = 1))
+      updateEntity(id = testEntityId1a, variables = list(a = 1, a = 1))
     )
     # Argument 'permissions' must be an operendPermissions object
     expect_error(
       updateEntity(
-        id = testEntity1a, permissions = list("_other" = character())
+        id = testEntityId1a, permissions = list("_other" = character())
       )
     )
     # Argument 'verbosity' must be coercible to a single nonnegative integer
-    expect_error(updateEntity(id = testEntity1a, verbosity = -1))
-    expect_error(updateEntity(id = testEntity1a, verbosity = 0:1))
-    expect_error(updateEntity(id = testEntity1a, verbosity = NA_integer_))
-    expect_error(updateEntity(id = testEntity1a, verbosity = "non-integer"))
+    expect_error(updateEntity(id = testEntityId1a, verbosity = -1))
+    expect_error(updateEntity(id = testEntityId1a, verbosity = 0:1))
+    expect_error(updateEntity(id = testEntityId1a, verbosity = NA_integer_))
+    expect_error(updateEntity(id = testEntityId1a, verbosity = "non-integer"))
   }
 )
 
@@ -521,16 +538,20 @@ test_that(
   "updateEntity returns an operendEntity object",
   {
     result <- updateEntity(
-      id = testEntity1a, variables = list(booleanScalar = FALSE)
+      id = testEntityId1a, variables = list(booleanScalar = FALSE)
     )
     expect_s4_class(result, class = "operendEntity")
+    expect_false(identical(result, entityCache$testEntity1a))
+    entityCache$testEntity1a <- result
     result <- updateEntity(
-      id = testEntity1a,
+      id = testEntityId1a,
       permissions = operendPermissions(
         rootgroup = c("R","U","D"), `_other` = "R"
       )
     )
     expect_s4_class(result, class = "operendEntity")
+    expect_false(identical(result, entityCache$testEntity1a))
+    entityCache$testEntity1a <- result
   }
 )
 
@@ -547,21 +568,21 @@ test_that(
     expect_error(deleteEntity(id = character()))
     expect_error(deleteEntity(id = letters))
     # Argument 'verbosity' must be coercible to a single nonnegative integer
-    expect_error(deleteEntity(id = testEntity1a, verbosity = -1))
-    expect_error(deleteEntity(id = testEntity1a, verbosity = 0:1))
-    expect_error(deleteEntity(id = testEntity1a, verbosity = NA_integer_))
-    expect_error(deleteEntity(id = testEntity1a, verbosity = "non-integer"))
+    expect_error(deleteEntity(id = testEntityId1a, verbosity = -1))
+    expect_error(deleteEntity(id = testEntityId1a, verbosity = 0:1))
+    expect_error(deleteEntity(id = testEntityId1a, verbosity = NA_integer_))
+    expect_error(deleteEntity(id = testEntityId1a, verbosity = "non-integer"))
   }
 )
 
 test_that(
   "deleteEntity returns TRUE on exit",
   {
-    result <- deleteEntity(id = testEntity2)
+    result <- deleteEntity(id = testEntityId2)
     expect_true(result)
-    result <- deleteEntity(id = testEntity1a)
+    result <- deleteEntity(id = testEntityId1a)
     expect_true(result)
-    result <- deleteEntity(id = testEntity1b)
+    result <- deleteEntity(id = testEntityId1b)
     expect_true(result)
   }
 )
