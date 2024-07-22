@@ -13,6 +13,7 @@
 *-Ex.R
 
 # Output files from R CMD build
+/src/*.o
 /*.tar.gz
 
 # Output files from R CMD check

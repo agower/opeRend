@@ -621,7 +621,7 @@ setMethod(
       } else if (variable@type == "W") {
         labels <- paste("WorkFile", value)
       } else if (is.character(value)) {
-        labels <- sQuote(value)
+        labels <- value
       } else {
         labels <- as(value, "character")
       }
@@ -999,14 +999,18 @@ setMethod(
       cat("\n")
     }
     cat("  File size:", format(object@length, big.mark = ","), "bytes\n")
+    cat("  Stored in:", object@storage)
+    cat("\n")
     # Print metadata
+    cat("  Originally modified:", as(object@originalModifiedTime, "character"))
+    cat("\n")
     cat("  Uploaded ")
     if (nchar(object@originalName)) {
       cat("as", sQuote(object@originalName), "")
     }
     cat(
       "by", object@creator,
-      "on", object@creationDatetime
+      "at", object@creationDatetime
     )
     cat("\n")
     cat("  Token:", object@token)

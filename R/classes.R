@@ -415,6 +415,9 @@ operendWorkFileIdList <- function (...)
 #' @slot fileType
 #' A character string specifying the type (e.g., extension) of the file.
 #' Created when the file is uploaded.
+#' @slot filePath
+#' A character string specifying the path of the file in WorkFile storage.
+#' Created when the file is uploaded.
 #' @slot isTrashed
 #' A logical value specifying whether the WorkFile is flagged to be
 #' trashed. Defaults to \code{FALSE}.
@@ -449,6 +452,7 @@ operendWorkFileProperties <- setClass(
     originalName         = "character",
     originalModifiedTime = "operendDate",
     fileType             = "character",
+    filePath             = "character",
     isTrashed            = "logical",
     isTransient          = "logical",
     creationDatetime     = "character",
@@ -467,6 +471,7 @@ operendWorkFileProperties <- setClass(
       as.POSIXct(-1, origin = "1970-01-01", tz = getOption("opeRend")$timezone)
     ),
     fileType             = "",
+    filePath             = "",
     isTrashed            = FALSE,
     isTransient          = FALSE,
     creationDatetime     = NA_character_,

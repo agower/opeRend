@@ -36,6 +36,9 @@ of the file.}
 \item{\code{fileType}}{A character string specifying the type (e.g., extension) of the file.
 Created when the file is uploaded.}
 
+\item{\code{filePath}}{A character string specifying the path of the file in WorkFile storage.
+Created when the file is uploaded.}
+
 \item{\code{isTrashed}}{A logical value specifying whether the WorkFile is flagged to be
 trashed. Defaults to \code{FALSE}.}
 
