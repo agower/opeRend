@@ -44,47 +44,45 @@ S4 operendListToS4 (List x, S4 object)
 
   */
 
-  // Declare variables
-  int i, j;      // iterators
-  int *matches;  // integer vector to hold output of Rf_match()
-
-  // Variables needed for handling Entity objects
+  // Declare variables, in order of introduction
+  R_xlen_t i, j;          // iterators
+  CharacterVector xNames = x.names();
   List Data;           // contents of slot .Data
-  bool isDataElement;  // does an element of 'x' contain an element of .Data?
-
-  // Extraction of .MTable from closure environment of coerce()
-  Function R_coerce("coerce");
-  Environment coerceMTable = as<Environment>(CLOENV(R_coerce)).get(".MTable");
-
-  // Other R functions needed for conversion
-  Function R_unlist("unlist");
-  Function R_factor("factor");
-    
-  // Variables used in conversion loop
-  CharacterVector fromClasses, toClasses, toClassesNames;
-  String fromClass, toClass, methodLabel;
+  CharacterVector toClasses, toClassesNames;
   std::string name;
+  String fromClass, toClass;
+  bool isDataElement;  // does an element of 'x' contain an element of .Data?
   RObject value;
   // Variables used in conversion to SimpleList objects
-  String elementType;  // contents of SimpleList slot 'elementType'
   List listData;       // contents of SimpleList slot 'listData'
+  String elementType;  // contents of SimpleList slot 'elementType'
 
-  // Declare variables using argument 'object'
-  const char *Class = object.attr("class");
-  RObject classDef = R_getClassDef(Class);
-  List slots = classDef.slot("slots");
-  bool isEntity = (strcmp(Class, "operendEntity") == 0);
+  // R functions needed for conversion
+  Function asFn("as", "methods");
+  Function extendsFn("extends", "methods");
+  Function factorFn("factor", "base");
+  Function unlistFn("unlist", "base");
   
+  // Declare variables using argument 'object'
+  String Class = as<String>(object.attr("class"));
+  bool isEntity = (Class == "operendEntity");
+  RObject classDef = R_getClassDef(Class.get_cstring());
+  List slots = classDef.slot("slots");
+  CharacterVector slotNames = slots.names();
+
   if (isEntity) {
     // Extract the .Data slot of the object to a named list
     Data = object.slot(".Data");
     Data.names() = object.attr("names");
+    // Store Data.names() in a variable to avoid trouble
+    // with passing names-attribute proxies to match()
+    CharacterVector dataNames = Data.names();
+    IntegerVector matches = match(dataNames, xNames);
     // Remove any elements of .Data that are not represented in 'x'
     // Note: removal proceeds in reverse order so index 'i' remains valid
     //       even after an element is removed from the list
-    matches = INTEGER(Rf_match(x.names(), Data.names(), 0));
     for (i = Data.size()-1; i >= 0; i--) {
-      if (matches[i] == 0) {
+      if (IntegerVector::is_na(matches[i])) {
         Data.erase(i);
       }
     }
@@ -96,9 +94,9 @@ S4 operendListToS4 (List x, S4 object)
     // Add the class of each slot to the toClasses vector,
     // skipping over the slot ".Data" that holds the Entity variables
     for (i = 0, j = 0; i < slots.size(); i++) {
-      if (as<CharacterVector>(slots.names())[i] != ".Data") {
+      if (slotNames[i] != ".Data") {
         toClasses[j] = as<String>(slots[i]);
-        toClassesNames[j] = as<CharacterVector>(slots.names())[i];
+        toClassesNames[j] = slotNames[i];
         j++;
       }
     }
@@ -113,14 +111,14 @@ S4 operendListToS4 (List x, S4 object)
     for (i = 0; i < slots.size(); i++) {
       toClasses[i] = as<String>(slots[i]);
     }
-    toClassesNames = slots.names();
+    toClassesNames = slotNames;
   }
   // Name vector 'toClasses'
   toClasses.names() = toClassesNames;
 
   // Iterate over each element of 'x', converting it to the proper class
   for (i = 0; i < x.size(); i++) {
-    name = as<std::string>(as<CharacterVector>(x.names())[i]);
+    name = as<std::string>(xNames[i]);
     fromClass = klass(x[i]);
     toClass = as<String>(toClasses[name]);
     isDataElement = (isEntity && name[0] != '_');
@@ -132,7 +130,7 @@ S4 operendListToS4 (List x, S4 object)
       } else {
         value = object.slot(name);
       }
-      if (R_extends(wrap(klass(value)), wrap("SimpleList"), R_GlobalEnv)) {
+      if (as<bool>(extendsFn(klass(value), "SimpleList"))) {
         // Objects that are an extension of "SimpleList" are handled specially
         listData = as<List>(x[i]);
         elementType = as<String>(value.slot("elementType"));
@@ -155,32 +153,13 @@ S4 operendListToS4 (List x, S4 object)
         value.slot("listData") = listData;
       } else if (fromClass == "list" && toClass == "character") {
         // This case is for the 'codes' element of an EntityClass variable
-        value = as<CharacterVector>(R_unlist(x[i]));
+        value = as<CharacterVector>(unlistFn(x[i]));
       } else if (fromClass == "character" && toClass == "factor") {
         // This case is for a code-type Entity variable
-        value = R_factor(x[i], value.attr("levels"));
+        value = factorFn(x[i], value.attr("levels"));
       } else {
-        // This final case directly looks up an appropriate method from the
-        // .MTable environment obtained from closure environment of coerce();
-        // it is MUCH faster than calling the R functions hasMethod() and as()
-
-        // The .MTable environment contains functions named with elements
-        // 'from' and 'to' of the signature (e.g., "fromClass#toClass").
-        // The environment is searched for the following, in order:
-        //   1. from = fromClass
-        //   2. from = "numeric" (only if fromClass == "integer")
-        //   3. from = "ANY"
-        fromClasses = fromClass;
-        if (fromClass == "integer") fromClasses.push_back("numeric");
-        fromClasses.push_back("ANY");
-        for (j = 0; j < fromClasses.size(); j++) {
-          methodLabel = fromClasses[j];
-          methodLabel += "#";
-          methodLabel += toClass;
-          if (coerceMTable.exists(methodLabel)) break;
-        }
-        Function coerceMethod = coerceMTable.get(methodLabel);
-        value = coerceMethod(x[i], toClass);
+        // This final case uses as() to look up an appropriate coercion method
+        value = asFn(x[i], toClass);
       }
     }
     // Store the converted value
@@ -195,7 +174,7 @@ S4 operendListToS4 (List x, S4 object)
     object.slot(".Data") = Data;
   }
 
-  // Return the object containing the converted values  
+  // Return the object containing the converted values
   return object;
 }
 
